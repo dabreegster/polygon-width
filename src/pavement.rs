@@ -1,4 +1,7 @@
-use geo::{Coord, Densify, EuclideanLength, Line, LineIntersection, LineString, Polygon};
+use geo::{
+    Contains, Coord, Densify, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
+    LineIntersection, LineLocatePoint, LineString, Polygon,
+};
 
 pub struct Pavement {
     // input
@@ -30,15 +33,41 @@ impl Pavement {
     }
 
     fn skeletonize(&mut self) {
-        let mut lines = geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, true);
-        // TODO Dunno what's happening with some
-        lines.retain(|ls| ls.euclidean_length() < 100.0);
-        self.skeletons = lines;
+        let avoid_boundaries_threshold = 0.1;
+
+        for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, true) {
+            // There are some huge lines that totally escape the polygon.
+            if !self.polygon.contains(&line) {
+                continue;
+            }
+
+            // There are also perpendicular straight skeleton segments that don't represent the
+            // center-line. Measure the distance between each line endpoint and the polygon's
+            // boundaries. If any is too small, skip it.
+            let mut ok = true;
+            for pt1 in [line.points().next().unwrap(), line.points().last().unwrap()] {
+                for boundary in vec![self.polygon.exterior()]
+                    .into_iter()
+                    .chain(self.polygon.interiors())
+                {
+                    // TODO Could try ClosestPoint again
+                    let fraction = boundary.line_locate_point(&pt1).unwrap();
+                    let pt2 = boundary.line_interpolate_point(fraction).unwrap();
+
+                    if pt1.euclidean_distance(&pt2) < avoid_boundaries_threshold {
+                        ok = false;
+                    }
+                }
+            }
+            if ok {
+                self.skeletons.push(line);
+            }
+        }
     }
 
     fn make_perp_lines(&mut self) {
         let step_size_meters = 5.0;
-        let project_away_meters = 25.0;
+        let project_away_meters = 10.0;
 
         for skeleton in &self.skeletons {
             let dense_line = skeleton.densify(step_size_meters);
