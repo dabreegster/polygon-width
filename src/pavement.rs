@@ -35,6 +35,7 @@ impl Pavement {
     fn skeletonize(&mut self) {
         let avoid_boundaries_threshold = 0.1;
 
+        let mut skeletons = Vec::new();
         for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, true) {
             // There are some huge lines that totally escape the polygon.
             if !self.polygon.contains(&line) {
@@ -60,9 +61,11 @@ impl Pavement {
                 }
             }
             if ok {
-                self.skeletons.push(line);
+                skeletons.push(line);
             }
         }
+
+        self.skeletons = crate::join_lines::join_linestrings(skeletons);
     }
 
     fn make_perp_lines(&mut self) {

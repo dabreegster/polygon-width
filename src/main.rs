@@ -5,6 +5,7 @@ use geojson::{de::deserialize_geometry, Feature, FeatureCollection};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 
+mod join_lines;
 mod pavement;
 
 fn main() -> Result<()> {
