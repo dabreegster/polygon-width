@@ -1,5 +1,5 @@
 use geo::{
-    Area, Contains, Coord, Densify, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
+    Area, Contains, Coord, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
     LineIntersection, LineLocatePoint, LineString, Polygon,
 };
 
@@ -83,15 +83,7 @@ impl Pavement {
         let project_away_meters = 10.0;
 
         for skeleton in &self.skeletons {
-            let dense_line = skeleton.densify(step_size_meters);
-
-            // Using lines instead of coords so we can get the angle -- but is this hard to reason
-            // about?  angle_at_point instead?
-            for orig_line in dense_line.lines() {
-                // TODO For the last line, use the last point too
-                let pt = orig_line.start;
-                let angle = line_angle_degrees(orig_line);
-
+            for (pt, angle) in crate::step_along_line::step_along_line(skeleton, step_size_meters) {
                 let pt1 = project_away(pt, angle - 90.0, project_away_meters);
                 let pt2 = project_away(pt, angle + 90.0, project_away_meters);
 
@@ -106,8 +98,13 @@ impl Pavement {
 
                 self.perp_lines.push(perp);
 
-                self.thickened_lines
-                    .push((thicken(orig_line, width), width));
+                self.thickened_lines.push((
+                    thicken(
+                        Line::new(pt, project_away(pt, angle, step_size_meters)),
+                        width,
+                    ),
+                    width,
+                ));
             }
         }
     }
@@ -119,10 +116,6 @@ fn project_away(pt: Coord, angle_degrees: f64, distance: f64) -> Coord {
         x: pt.x + distance * cos,
         y: pt.y + distance * sin,
     }
-}
-
-fn line_angle_degrees(line: Line) -> f64 {
-    line.dy().atan2(line.dx()).to_degrees()
 }
 
 fn clip_line_to_polygon(polygon: &Polygon, line: Line) -> Option<Line> {
@@ -152,4 +145,8 @@ fn thicken(line: Line, width: f64) -> Polygon {
         ]),
         Vec::new(),
     )
+}
+
+fn line_angle_degrees(line: Line) -> f64 {
+    line.dy().atan2(line.dx()).to_degrees()
 }

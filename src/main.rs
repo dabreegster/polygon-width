@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 mod join_lines;
 mod pavement;
+mod step_along_line;
 
 fn main() -> Result<()> {
     let pavements = if true {
