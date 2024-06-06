@@ -1,5 +1,5 @@
 use geo::{
-    Contains, Coord, Densify, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
+    Area, Contains, Coord, Densify, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
     LineIntersection, LineLocatePoint, LineString, Polygon,
 };
 
@@ -18,7 +18,17 @@ pub struct Pavement {
 }
 
 impl Pavement {
-    pub fn new(polygon: Polygon) -> Self {
+    pub fn new(mut polygon: Polygon) -> Self {
+        // Remove small holes, representing bus stops in the example input
+        if true {
+            let (exterior, mut holes) = polygon.into_inner();
+            holes.retain(|hole| {
+                let p = Polygon::new(hole.clone(), Vec::new());
+                p.unsigned_area() > 100.0
+            });
+            polygon = Polygon::new(exterior, holes);
+        }
+
         Self {
             polygon,
             skeletons: Vec::new(),
