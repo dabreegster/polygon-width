@@ -1,5 +1,4 @@
 target/
 *.swp
 test_input/
-*.geojson
-*.gpkg
+output/

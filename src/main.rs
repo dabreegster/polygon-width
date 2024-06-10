@@ -10,11 +10,10 @@ mod pavement;
 mod step_along_line;
 
 fn main() -> Result<()> {
-    let pavements = if true {
-        read_gj_input("test_input/small.geojson")?
-    } else {
-        read_gpkg_input("test_input/large.gpkg")?
-    };
+    //let pavements = read_gj_input("test_input/small_pavements.geojson")?;
+    let pavements = read_gj_input("test_input/small_roads.geojson")?;
+    //let pavements = read_gpkg_input("test_input/large.gpkg", "Roadside")?;
+    //let pavements = read_gpkg_input("test_input/large.gpkg", "Road Or Track")?;
 
     let mut input_polygons = Vec::new();
     let mut skeletons = Vec::new();
@@ -38,11 +37,11 @@ fn main() -> Result<()> {
         }
     }
 
-    dump_gj("input_polygons.geojson", input_polygons)?;
-    dump_gj("skeletons.geojson", skeletons)?;
-    dump_gj("perps.geojson", perps)?;
+    dump_gj("output/input_polygons.geojson", input_polygons)?;
+    dump_gj("output/skeletons.geojson", skeletons)?;
+    dump_gj("output/perps.geojson", perps)?;
 
-    std::fs::write("thickened.geojson", serde_json::to_string(&FeatureCollection {
+    std::fs::write("output/thickened.geojson", serde_json::to_string(&FeatureCollection {
         features: thickened,
         bbox: None,
         foreign_members: Some(serde_json::json!({
@@ -52,7 +51,7 @@ fn main() -> Result<()> {
         .unwrap()
         .clone()),
     })?)?;
-    println!("Wrote thickened.geojson");
+    println!("Wrote output/thickened.geojson");
 
     Ok(())
 }
@@ -88,7 +87,7 @@ struct Input {
     geometry: Polygon,
 }
 
-fn read_gpkg_input(filename: &str) -> Result<Vec<pavement::Pavement>> {
+fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<Vec<pavement::Pavement>> {
     let mut results = Vec::new();
     let dataset = Dataset::open(filename)?;
     // Assume only one layer
@@ -97,7 +96,7 @@ fn read_gpkg_input(filename: &str) -> Result<Vec<pavement::Pavement>> {
         if feature
             .field_as_string_by_name("descriptive_group")?
             .unwrap()
-            != "Roadside"
+            != descriptive_group
         {
             continue;
         }
