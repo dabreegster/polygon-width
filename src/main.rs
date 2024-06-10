@@ -1,9 +1,8 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
 use gdal::{vector::LayerAccess, Dataset};
-use geo::{Geometry, GeometryCollection, Polygon};
-use geojson::{de::deserialize_geometry, Feature, FeatureCollection};
+use geo::{Geometry, GeometryCollection};
+use geojson::{Feature, FeatureCollection, GeoJson};
 use indicatif::{ProgressBar, ProgressStyle};
-use serde::Deserialize;
 
 mod join_lines;
 mod pavement;
@@ -11,7 +10,8 @@ mod step_along_line;
 
 fn main() -> Result<()> {
     //let pavements = read_gj_input("test_input/small_pavements.geojson")?;
-    let pavements = read_gj_input("test_input/small_roads.geojson")?;
+    let pavements = read_gj_input("test_input/small_road_polygons.geojson")?;
+    //let pavements = read_gj_input("test_input/dissolved_roads.geojson")?;
     //let pavements = read_gpkg_input("test_input/large.gpkg", "Roadside")?;
     //let pavements = read_gpkg_input("test_input/large.gpkg", "Road Or Track")?;
 
@@ -72,19 +72,22 @@ fn dump_gj<IG: Into<Geometry>>(filename: &str, geometry: Vec<IG>) -> Result<()> 
 }
 
 fn read_gj_input(filename: &str) -> Result<Vec<pavement::Pavement>> {
-    let input: Vec<Input> = geojson::de::deserialize_feature_collection_str_to_vec(
-        &std::fs::read_to_string(filename)?,
-    )?;
-    Ok(input
-        .into_iter()
-        .map(|x| pavement::Pavement::new(x.geometry))
-        .collect())
-}
-
-#[derive(Deserialize)]
-struct Input {
-    #[serde(deserialize_with = "deserialize_geometry")]
-    geometry: Polygon,
+    let gj: GeoJson = std::fs::read_to_string(filename)?.parse()?;
+    let mut results = Vec::new();
+    for x in geojson::quick_collection(&gj)? {
+        match x {
+            Geometry::Polygon(p) => {
+                results.push(pavement::Pavement::new(p));
+            }
+            Geometry::MultiPolygon(mp) => {
+                for p in mp {
+                    results.push(pavement::Pavement::new(p));
+                }
+            }
+            _ => bail!("Unexpected geometry type {:?}", x),
+        }
+    }
+    Ok(results)
 }
 
 fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<Vec<pavement::Pavement>> {
