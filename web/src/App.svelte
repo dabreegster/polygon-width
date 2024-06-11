@@ -157,6 +157,8 @@
               <option value={key}>{key}</option>
             {/each}
           </select>
+
+          (some from OpenStreetMap)
         </label>
       {/if}
     </details>
