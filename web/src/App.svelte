@@ -80,12 +80,16 @@
     inputString = await fileInput.files![0].text();
   }
 
-  function startPolygonTool() {
+  function startPolygonTool(edit: boolean) {
     if (!map) {
       return;
     }
     polygonTool = new PolygonTool(map);
-    polygonTool.startNew();
+    if (edit) {
+      polygonTool.editExisting(JSON.parse(inputString));
+    } else {
+      polygonTool.startNew();
+    }
     polygonTool.addEventListenerSuccess(async (f) => {
       polygonTool = null;
       shouldZoom = true;
@@ -110,14 +114,23 @@
       </label>
 
       <div>
-        <button type="button" on:click={startPolygonTool}>
+        <button type="button" on:click={() => startPolygonTool(false)}>
           Draw your own polygon
         </button>
       </div>
 
       {#if wkt_input}
         <div>
-          <button on:click={() => (showWkt = true)}>Copy polygon as WKT</button>
+          <button class="secondary" on:click={() => (showWkt = true)}>
+            Copy polygon as WKT
+          </button>
+          <button
+            class="secondary"
+            on:click={() => startPolygonTool(true)}
+            disabled={polygonTool != null}
+          >
+            Edit polygon
+          </button>
         </div>
       {/if}
     {/if}

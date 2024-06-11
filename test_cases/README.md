@@ -1,1 +1,0 @@
-This directory has individual test cases (one input polygon) in WKT, BNG. They're gitignored because they come from proprietary sources, but could be replaced later with similar shapes without license restrictions.
