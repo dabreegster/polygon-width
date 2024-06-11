@@ -78,6 +78,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gdal",
+ "geo 0.28.0",
+ "geojson",
+ "indicatif",
+ "serde",
+ "serde_json",
+ "widths",
+]
+
+[[package]]
 name = "console"
 version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -378,20 +392,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
 
 [[package]]
-name = "polygon_width"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "gdal",
- "geo 0.28.0",
- "geo-buffer",
- "geojson",
- "indicatif",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -588,6 +588,14 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "widths"
+version = "0.1.0"
+dependencies = [
+ "geo 0.28.0",
+ "geo-buffer",
+]
 
 [[package]]
 name = "windows-sys"

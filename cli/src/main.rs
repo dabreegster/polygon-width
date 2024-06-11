@@ -4,19 +4,14 @@ use geo::{Geometry, GeometryCollection, Polygon};
 use geojson::{Feature, FeatureCollection, GeoJson};
 use indicatif::{ProgressBar, ProgressStyle};
 
-use self::mercator::Mercator;
-
-mod join_lines;
-mod mercator;
-mod pavement;
-mod step_along_line;
+use widths::{Mercator, Pavement};
 
 fn main() -> Result<()> {
-    //let (pavements, mercator) = read_gj_input("test_input/small_pavements.geojson")?;
-    //let (pavements, mercator) = read_gj_input("test_input/small_road_polygons.geojson")?;
-    //let (pavements, mercator) = read_gj_input("test_input/dissolved_roads.geojson")?;
-    let (pavements, mercator) = read_gpkg_input("test_input/large.gpkg", "Roadside")?;
-    //let pavements = read_gpkg_input("test_input/large.gpkg", "Road Or Track")?;
+    let (pavements, mercator) = read_gj_input("../test_input/small_pavements.geojson")?;
+    //let (pavements, mercator) = read_gj_input("../test_input/small_road_polygons.geojson")?;
+    //let (pavements, mercator) = read_gj_input("../test_input/dissolved_roads.geojson")?;
+    //let (pavements, mercator) = read_gpkg_input("../test_input/large.gpkg", "Roadside")?;
+    //let pavements = read_gpkg_input("../test_input/large.gpkg", "Road Or Track")?;
 
     let mut input_polygons = Vec::new();
     let mut skeletons = Vec::new();
@@ -65,7 +60,7 @@ fn dump_gj<IG: Into<Geometry>>(
 }
 
 #[allow(unused)]
-fn read_gj_input(filename: &str) -> Result<(Vec<pavement::Pavement>, Mercator)> {
+fn read_gj_input(filename: &str) -> Result<(Vec<Pavement>, Mercator)> {
     let gj: GeoJson = std::fs::read_to_string(filename)?.parse()?;
     let mut wgs84_polygons = Vec::new();
     for x in geojson::quick_collection(&gj)? {
@@ -86,10 +81,7 @@ fn read_gj_input(filename: &str) -> Result<(Vec<pavement::Pavement>, Mercator)> 
 }
 
 #[allow(unused)]
-fn read_gpkg_input(
-    filename: &str,
-    descriptive_group: &str,
-) -> Result<(Vec<pavement::Pavement>, Mercator)> {
+fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<(Vec<Pavement>, Mercator)> {
     let mut polygons = Vec::new();
     let dataset = Dataset::open(filename)?;
     // Assume only one layer
@@ -115,7 +107,7 @@ fn read_gpkg_input(
     Ok(to_mercator(polygons))
 }
 
-fn to_mercator(polygons: Vec<Polygon>) -> (Vec<pavement::Pavement>, Mercator) {
+fn to_mercator(polygons: Vec<Polygon>) -> (Vec<Pavement>, Mercator) {
     // TODO Expensive clone
     let collection = GeometryCollection::from(polygons.clone());
     let mercator = Mercator::from(collection).unwrap();
@@ -123,7 +115,7 @@ fn to_mercator(polygons: Vec<Polygon>) -> (Vec<pavement::Pavement>, Mercator) {
     let mut results = Vec::new();
     for mut p in polygons {
         mercator.to_mercator_in_place(&mut p);
-        results.push(pavement::Pavement::new(p));
+        results.push(Pavement::new(p));
     }
 
     (results, mercator)

@@ -1,6 +1,7 @@
 target/
 node_modules/
 *.swp
+
 test_input/
 output/
 test_cases/*.wkt

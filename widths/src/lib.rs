@@ -1,7 +1,12 @@
+mod join_lines;
+mod mercator;
+mod step_along_line;
+
 use geo::{
     Area, Contains, Coord, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,
     LineIntersection, LineLocatePoint, LineString, Polygon,
 };
+pub use mercator::Mercator;
 
 pub struct Pavement {
     // input
