@@ -6,6 +6,11 @@
   import { LineLayer, FillLayer, GeoJSON, MapLibre } from "svelte-maplibre";
   import type { FeatureCollection, LineString, Polygon } from "geojson";
   import bbox from "@turf/bbox";
+  import {
+    PolygonTool,
+    PolygonControls,
+    PolygonToolLayer,
+  } from "maplibre-draw-polygon";
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
@@ -21,11 +26,12 @@
 
   let map: Map;
   let fileInput: HTMLInputElement;
-  async function loadFile(e: Event) {
+  let polygonTool: PolygonTool | null = null;
+
+  async function handleInput(gj: string) {
     await init();
 
-    let text = await fileInput.files![0].text();
-    let results = JSON.parse(findWidths(text));
+    let results = JSON.parse(findWidths(gj));
     input = results.input;
     skeletons = results.skeletons;
     perps = results.perps;
@@ -36,16 +42,46 @@
       padding: 10,
     });
   }
+
+  async function loadFile(e: Event) {
+    let gj = await fileInput.files![0].text();
+    await handleInput(gj);
+  }
+
+  function startPolygonTool() {
+    if (!map) {
+      return;
+    }
+    polygonTool = new PolygonTool(map);
+    polygonTool.startNew();
+    polygonTool.addEventListenerSuccess(async (f) => {
+      polygonTool = null;
+      await handleInput(JSON.stringify(f));
+    });
+    polygonTool.addEventListenerFailure(() => {
+      polygonTool = null;
+    });
+  }
 </script>
 
 <Layout>
   <div slot="left">
     <h1>Polygon width</h1>
 
-    <label>
-      Load a .geojson file
-      <input bind:this={fileInput} on:change={loadFile} type="file" />
-    </label>
+    {#if polygonTool}
+      <PolygonControls {polygonTool} />
+    {:else}
+      <label>
+        Load a .geojson file
+        <input bind:this={fileInput} on:change={loadFile} type="file" />
+      </label>
+
+      <button type="button" on:click={startPolygonTool}>
+        Draw your own polygon
+      </button>
+    {/if}
+
+    <hr />
 
     <label>
       <input type="checkbox" bind:checked={showInput} />
@@ -71,6 +107,8 @@
       hash
       bind:map
     >
+      <PolygonToolLayer />
+
       {#if input}
         <GeoJSON data={input}
           ><FillLayer
