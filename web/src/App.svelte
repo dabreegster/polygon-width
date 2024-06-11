@@ -17,6 +17,7 @@
     PolygonControls,
     PolygonToolLayer,
   } from "maplibre-draw-polygon";
+  import Settings from "./Settings.svelte";
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
@@ -34,24 +35,45 @@
   let fileInput: HTMLInputElement;
   let polygonTool: PolygonTool | null = null;
 
-  async function handleInput(gj: string) {
+  let inputString = "";
+  let cfg = {
+    remove_holes: 100.0,
+
+    flip_orientation: false,
+    filter_skeletons_outside: true,
+    filter_skeletons_near_boundary: 0.1,
+    join_skeletons: true,
+
+    make_perps_step_size: 5.0,
+  };
+  let shouldZoom = true;
+
+  async function handleInput(gj: string, cfg: any) {
+    if (!gj) {
+      return;
+    }
     await init();
 
-    let results = JSON.parse(findWidths(gj));
+    let results = JSON.parse(findWidths(gj, cfg));
     input = results.input;
     skeletons = results.skeletons;
     perps = results.perps;
     thickened = results.thickened;
 
-    map?.fitBounds(bbox(input!) as [number, number, number, number], {
-      animate: false,
-      padding: 10,
-    });
+    if (shouldZoom) {
+      map?.fitBounds(bbox(input!) as [number, number, number, number], {
+        animate: false,
+        padding: 10,
+      });
+      // Only do it once per input; when cfg changes, don't jump around
+      shouldZoom = false;
+    }
   }
+  $: handleInput(inputString, cfg);
 
   async function loadFile(e: Event) {
-    let gj = await fileInput.files![0].text();
-    await handleInput(gj);
+    shouldZoom = true;
+    inputString = await fileInput.files![0].text();
   }
 
   function startPolygonTool() {
@@ -62,7 +84,8 @@
     polygonTool.startNew();
     polygonTool.addEventListenerSuccess(async (f) => {
       polygonTool = null;
-      await handleInput(JSON.stringify(f));
+      shouldZoom = true;
+      inputString = JSON.stringify(f);
     });
     polygonTool.addEventListenerFailure(() => {
       polygonTool = null;
@@ -105,6 +128,10 @@
       <input type="checkbox" bind:checked={showThickened} />
       Show thickened polygons
     </label>
+
+    <hr />
+
+    <Settings bind:cfg />
   </div>
   <div slot="main" style="position:relative; width: 100%; height: 100vh;">
     <MapLibre

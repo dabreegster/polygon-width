@@ -592,6 +592,7 @@ dependencies = [
  "geo-buffer",
  "geojson",
  "log",
+ "serde",
 ]
 
 [[package]]

@@ -8,6 +8,7 @@ use geo::{
     LineIntersection, LineLocatePoint, LineString, Polygon,
 };
 pub use mercator::Mercator;
+use serde::Deserialize;
 
 pub struct Pavement {
     // input
@@ -24,13 +25,13 @@ pub struct Pavement {
 }
 
 impl Pavement {
-    pub fn new(mut polygon: Polygon) -> Self {
+    pub fn new(mut polygon: Polygon, cfg: &Config) -> Self {
         // Remove small holes, representing bus stops in the example input
-        if true {
+        if let Some(limit) = cfg.remove_holes {
             let (exterior, mut holes) = polygon.into_inner();
             holes.retain(|hole| {
                 let p = Polygon::new(hole.clone(), Vec::new());
-                p.unsigned_area() > 100.0
+                p.unsigned_area() > limit
             });
             polygon = Polygon::new(exterior, holes);
         }
@@ -43,19 +44,21 @@ impl Pavement {
         }
     }
 
-    pub fn calculate(&mut self) {
-        self.skeletonize();
-        self.make_perp_lines();
+    pub fn calculate(&mut self, cfg: &Config) {
+        self.skeletonize(cfg);
+        if let Some(step_size) = cfg.make_perps_step_size {
+            self.make_perp_lines(step_size);
+        }
     }
 
-    fn skeletonize(&mut self) {
-        let avoid_boundaries_threshold = 0.1;
-
+    fn skeletonize(&mut self, cfg: &Config) {
         let mut skeletons = Vec::new();
         // TODO true/false here seems to depend on using Mercator
-        for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, false) {
+        for line in
+            geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, cfg.flip_orientation)
+        {
             // There are some huge lines that totally escape the polygon.
-            if !self.polygon.contains(&line) {
+            if cfg.filter_skeletons_outside && !self.polygon.contains(&line) {
                 continue;
             }
 
@@ -63,17 +66,19 @@ impl Pavement {
             // center-line. Measure the distance between each line endpoint and the polygon's
             // boundaries. If any is too small, skip it.
             let mut ok = true;
-            for pt1 in [line.points().next().unwrap(), line.points().last().unwrap()] {
-                for boundary in vec![self.polygon.exterior()]
-                    .into_iter()
-                    .chain(self.polygon.interiors())
-                {
-                    // TODO Could try ClosestPoint again
-                    let fraction = boundary.line_locate_point(&pt1).unwrap();
-                    let pt2 = boundary.line_interpolate_point(fraction).unwrap();
+            if let Some(avoid_boundaries_threshold) = cfg.filter_skeletons_near_boundary {
+                for pt1 in [line.points().next().unwrap(), line.points().last().unwrap()] {
+                    for boundary in vec![self.polygon.exterior()]
+                        .into_iter()
+                        .chain(self.polygon.interiors())
+                    {
+                        // TODO Could try ClosestPoint again
+                        let fraction = boundary.line_locate_point(&pt1).unwrap();
+                        let pt2 = boundary.line_interpolate_point(fraction).unwrap();
 
-                    if pt1.euclidean_distance(&pt2) < avoid_boundaries_threshold {
-                        ok = false;
+                        if pt1.euclidean_distance(&pt2) < avoid_boundaries_threshold {
+                            ok = false;
+                        }
                     }
                 }
             }
@@ -82,11 +87,14 @@ impl Pavement {
             }
         }
 
-        self.skeletons = crate::join_lines::join_linestrings(skeletons);
+        if cfg.join_skeletons {
+            self.skeletons = crate::join_lines::join_linestrings(skeletons);
+        } else {
+            self.skeletons = skeletons;
+        }
     }
 
-    fn make_perp_lines(&mut self) {
-        let step_size_meters = 5.0;
+    fn make_perp_lines(&mut self, step_size_meters: f64) {
         let project_away_meters = 10.0;
 
         for skeleton in &self.skeletons {
@@ -156,4 +164,32 @@ fn thicken(line: Line, width: f64) -> Polygon {
 
 fn line_angle_degrees(line: Line) -> f64 {
     line.dy().atan2(line.dx()).to_degrees()
+}
+
+#[derive(Deserialize)]
+pub struct Config {
+    // Remove smaller than this unsigned area in m^2
+    pub remove_holes: Option<f64>,
+
+    pub flip_orientation: bool,
+    pub filter_skeletons_outside: bool,
+    pub filter_skeletons_near_boundary: Option<f64>,
+    pub join_skeletons: bool,
+
+    pub make_perps_step_size: Option<f64>,
+}
+
+impl Config {
+    pub fn default() -> Self {
+        Self {
+            remove_holes: Some(100.0),
+
+            flip_orientation: false,
+            filter_skeletons_outside: true,
+            filter_skeletons_near_boundary: Some(0.1),
+            join_skeletons: true,
+
+            make_perps_step_size: Some(5.0),
+        }
+    }
 }

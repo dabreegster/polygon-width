@@ -10,21 +10,23 @@ static START: Once = Once::new();
 
 /// Takes GeoJSON with polygons in WGS84
 #[wasm_bindgen(js_name = findWidths)]
-pub fn find_widths(input: String) -> Result<String, JsValue> {
+pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
     // Panics shouldn't happen, but if they do, console.log them.
     console_error_panic_hook::set_once();
     START.call_once(|| {
         console_log::init_with_level(log::Level::Info).unwrap();
     });
 
+    let cfg: widths::Config = serde_wasm_bindgen::from_value(raw_cfg)?;
+
     let mut input_polygons = Vec::new();
     let mut skeletons = Vec::new();
     let mut perps = Vec::new();
     let mut thickened = Vec::new();
 
-    let (pavements, mercator) = widths::utils::read_gj_input(input).map_err(err_to_js)?;
+    let (pavements, mercator) = widths::utils::read_gj_input(input, &cfg).map_err(err_to_js)?;
     for mut pavement in pavements {
-        pavement.calculate();
+        pavement.calculate(&cfg);
 
         input_polygons.push(pavement.polygon);
         skeletons.extend(pavement.skeletons);

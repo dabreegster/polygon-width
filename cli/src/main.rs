@@ -6,13 +6,15 @@ use indicatif::{ProgressBar, ProgressStyle};
 
 use widths::{
     utils::{read_gj_input, to_mercator},
-    Mercator, Pavement,
+    Config, Mercator, Pavement,
 };
 
 fn main() -> Result<()> {
-    let (pavements, mercator) = read_gj_input(std::fs::read_to_string(
-        "../test_input/small_pavements.geojson",
-    )?)?;
+    let cfg = Config::default();
+    let (pavements, mercator) = read_gj_input(
+        std::fs::read_to_string("../test_input/small_pavements.geojson")?,
+        &cfg,
+    )?;
     //let (pavements, mercator) = read_gj_input(std::fs::read_to_string("../test_input/small_road_polygons.geojson")?)?;
     //let (pavements, mercator) = read_gpkg_input("../test_input/large.gpkg", "Roadside")?;
     //let pavements = read_gpkg_input("../test_input/large.gpkg", "Road Or Track")?;
@@ -27,7 +29,7 @@ fn main() -> Result<()> {
 
     for mut pavement in pavements {
         progress.inc(1);
-        pavement.calculate();
+        pavement.calculate(&cfg);
 
         input_polygons.push(pavement.polygon);
         skeletons.extend(pavement.skeletons);
@@ -64,7 +66,11 @@ fn dump_gj<IG: Into<Geometry>>(
 }
 
 #[allow(unused)]
-fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<(Vec<Pavement>, Mercator)> {
+fn read_gpkg_input(
+    filename: &str,
+    descriptive_group: &str,
+    cfg: &Config,
+) -> Result<(Vec<Pavement>, Mercator)> {
     let mut polygons = Vec::new();
     let dataset = Dataset::open(filename)?;
     // Assume only one layer
@@ -87,5 +93,5 @@ fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<(Vec<Pavem
         polygons.push(polygon);
     }
 
-    Ok(to_mercator(polygons))
+    Ok(to_mercator(polygons, cfg))
 }

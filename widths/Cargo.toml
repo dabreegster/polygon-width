@@ -9,3 +9,4 @@ geo = "0.28.0"
 geo-buffer = { git = "https://github.com/MarcioOrdonez/geo-buffer", branch = "chore/bump-geo-version-to-v.0.25.0" }
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
 log = "0.4.21"
+serde = { version = "1.0.203", features = ["derive"] }
