@@ -5,6 +5,7 @@
   import type { Map } from "maplibre-gl";
   import { LineLayer, FillLayer, GeoJSON, MapLibre } from "svelte-maplibre";
   import type { FeatureCollection, LineString, Polygon } from "geojson";
+  import bbox from "@turf/bbox";
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
@@ -30,7 +31,10 @@
     perps = results.perps;
     thickened = results.thickened;
 
-    // TODO zoom
+    map?.fitBounds(bbox(input!) as [number, number, number, number], {
+      animate: false,
+      padding: 10,
+    });
   }
 </script>
 
