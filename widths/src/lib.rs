@@ -53,44 +53,51 @@ impl Pavement {
 
     fn skeletonize(&mut self, cfg: &Config) {
         let mut skeletons = Vec::new();
-        // TODO true/false here seems to depend on using Mercator
-        for line in
-            geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, cfg.flip_orientation)
-        {
-            // There are some huge lines that totally escape the polygon.
-            if cfg.filter_skeletons_outside && !self.polygon.contains(&line) {
-                continue;
-            }
 
-            // There are also perpendicular straight skeleton segments that don't represent the
-            // center-line. Measure the distance between each line endpoint and the polygon's
-            // boundaries. If any is too small, skip it.
-            let mut ok = true;
-            if let Some(avoid_boundaries_threshold) = cfg.filter_skeletons_near_boundary {
-                for pt1 in [line.points().next().unwrap(), line.points().last().unwrap()] {
-                    for boundary in vec![self.polygon.exterior()]
-                        .into_iter()
-                        .chain(self.polygon.interiors())
-                    {
-                        // TODO Could try ClosestPoint again
-                        let fraction = boundary.line_locate_point(&pt1).unwrap();
-                        let pt2 = boundary.line_interpolate_point(fraction).unwrap();
+        // TODO We want the lines inside, but this seems to give the wrong answer for some inputs,
+        // even after reorienting. Just try both.
+        for orientation in [true, false] {
+            for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, orientation) {
+                // There are some huge lines that totally escape the polygon.
+                if cfg.filter_skeletons_outside && !self.polygon.contains(&line) {
+                    continue;
+                }
 
-                        if pt1.euclidean_distance(&pt2) < avoid_boundaries_threshold {
-                            ok = false;
+                // There are also perpendicular straight skeleton segments that don't represent the
+                // center-line. Measure the distance between each line endpoint and the polygon's
+                // boundaries. If any is too small, skip it.
+                let mut ok = true;
+                if let Some(avoid_boundaries_threshold) = cfg.filter_skeletons_near_boundary {
+                    for pt1 in [line.points().next().unwrap(), line.points().last().unwrap()] {
+                        for boundary in vec![self.polygon.exterior()]
+                            .into_iter()
+                            .chain(self.polygon.interiors())
+                        {
+                            // TODO Could try ClosestPoint again
+                            let fraction = boundary.line_locate_point(&pt1).unwrap();
+                            let pt2 = boundary.line_interpolate_point(fraction).unwrap();
+
+                            if pt1.euclidean_distance(&pt2) < avoid_boundaries_threshold {
+                                ok = false;
+                            }
                         }
                     }
                 }
+                if ok {
+                    skeletons.push(line);
+                }
             }
-            if ok {
-                skeletons.push(line);
-            }
-        }
 
-        if cfg.join_skeletons {
-            self.skeletons = crate::join_lines::join_linestrings(skeletons);
-        } else {
-            self.skeletons = skeletons;
+            // Try the next orientation
+            if skeletons.is_empty() {
+                continue;
+            }
+            if cfg.join_skeletons {
+                self.skeletons = crate::join_lines::join_linestrings(skeletons);
+            } else {
+                self.skeletons = skeletons;
+            }
+            break;
         }
     }
 
@@ -171,7 +178,6 @@ pub struct Config {
     // Remove smaller than this unsigned area in m^2
     pub remove_holes: Option<f64>,
 
-    pub flip_orientation: bool,
     pub filter_skeletons_outside: bool,
     pub filter_skeletons_near_boundary: Option<f64>,
     pub join_skeletons: bool,
@@ -184,7 +190,6 @@ impl Config {
         Self {
             remove_holes: Some(100.0),
 
-            flip_orientation: false,
             filter_skeletons_outside: true,
             filter_skeletons_near_boundary: Some(0.1),
             join_skeletons: true,

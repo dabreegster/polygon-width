@@ -15,13 +15,6 @@
 
   <div>
     <label>
-      <input type="checkbox" bind:checked={cfg.flip_orientation} />
-      Flip orientation of polygons (need to try both depending on input)
-    </label>
-  </div>
-
-  <div>
-    <label>
       <input type="checkbox" bind:checked={cfg.filter_skeletons_outside} />
       Filter skeleton lines outside polygon
     </label>

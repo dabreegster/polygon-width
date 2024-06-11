@@ -45,7 +45,6 @@
   let cfg = {
     remove_holes: 100.0,
 
-    flip_orientation: false,
     filter_skeletons_outside: true,
     filter_skeletons_near_boundary: 0.1,
     join_skeletons: true,
