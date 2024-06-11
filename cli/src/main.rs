@@ -1,15 +1,19 @@
-use anyhow::{bail, Result};
+use anyhow::Result;
 use gdal::{vector::LayerAccess, Dataset};
-use geo::{Geometry, GeometryCollection, Polygon};
+use geo::{Geometry, GeometryCollection};
 use geojson::{Feature, FeatureCollection, GeoJson};
 use indicatif::{ProgressBar, ProgressStyle};
 
-use widths::{Mercator, Pavement};
+use widths::{
+    utils::{read_gj_input, to_mercator},
+    Mercator, Pavement,
+};
 
 fn main() -> Result<()> {
-    let (pavements, mercator) = read_gj_input("../test_input/small_pavements.geojson")?;
-    //let (pavements, mercator) = read_gj_input("../test_input/small_road_polygons.geojson")?;
-    //let (pavements, mercator) = read_gj_input("../test_input/dissolved_roads.geojson")?;
+    let (pavements, mercator) = read_gj_input(std::fs::read_to_string(
+        "../test_input/small_pavements.geojson",
+    )?)?;
+    //let (pavements, mercator) = read_gj_input(std::fs::read_to_string("../test_input/small_road_polygons.geojson")?)?;
     //let (pavements, mercator) = read_gpkg_input("../test_input/large.gpkg", "Roadside")?;
     //let pavements = read_gpkg_input("../test_input/large.gpkg", "Road Or Track")?;
 
@@ -60,27 +64,6 @@ fn dump_gj<IG: Into<Geometry>>(
 }
 
 #[allow(unused)]
-fn read_gj_input(filename: &str) -> Result<(Vec<Pavement>, Mercator)> {
-    let gj: GeoJson = std::fs::read_to_string(filename)?.parse()?;
-    let mut wgs84_polygons = Vec::new();
-    for x in geojson::quick_collection(&gj)? {
-        match x {
-            Geometry::Polygon(p) => {
-                wgs84_polygons.push(p);
-            }
-            Geometry::MultiPolygon(mp) => {
-                for p in mp {
-                    wgs84_polygons.push(p);
-                }
-            }
-            _ => bail!("Unexpected geometry type {:?}", x),
-        }
-    }
-
-    Ok(to_mercator(wgs84_polygons))
-}
-
-#[allow(unused)]
 fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<(Vec<Pavement>, Mercator)> {
     let mut polygons = Vec::new();
     let dataset = Dataset::open(filename)?;
@@ -105,18 +88,4 @@ fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<(Vec<Pavem
     }
 
     Ok(to_mercator(polygons))
-}
-
-fn to_mercator(polygons: Vec<Polygon>) -> (Vec<Pavement>, Mercator) {
-    // TODO Expensive clone
-    let collection = GeometryCollection::from(polygons.clone());
-    let mercator = Mercator::from(collection).unwrap();
-
-    let mut results = Vec::new();
-    for mut p in polygons {
-        mercator.to_mercator_in_place(&mut p);
-        results.push(Pavement::new(p));
-    }
-
-    (results, mercator)
 }

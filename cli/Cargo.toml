@@ -9,7 +9,6 @@ gdal = "0.16.0"
 geo = "0.28.0"
 geojson = { git = "https://github.com/georust/geojson", features = ["geo-types"] }
 indicatif = "0.17.8"
-serde = { version = "1.0.203", features = ["derive"] }
 serde_json = "1.0.117"
 widths = { path = "../widths" }
 

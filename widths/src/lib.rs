@@ -1,6 +1,7 @@
 mod join_lines;
 mod mercator;
 mod step_along_line;
+pub mod utils;
 
 use geo::{
     Area, Contains, Coord, EuclideanDistance, EuclideanLength, Line, LineInterpolatePoint,

@@ -1,6 +1,8 @@
 use std::sync::Once;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
+use geo::GeometryCollection;
+use geojson::{Feature, FeatureCollection, GeoJson};
 
 use wasm_bindgen::prelude::*;
 
@@ -15,7 +17,32 @@ pub fn find_widths(input: String) -> Result<String, JsValue> {
         console_log::init_with_level(log::Level::Info).unwrap();
     });
 
-    Ok(format!("got text input {}", input.len()))
+    let mut input_polygons = Vec::new();
+    let mut skeletons = Vec::new();
+    let mut perps = Vec::new();
+    let mut thickened = Vec::new();
+
+    let (pavements, mercator) = widths::utils::read_gj_input(input).map_err(err_to_js)?;
+    for mut pavement in pavements {
+        pavement.calculate();
+
+        input_polygons.push(pavement.polygon);
+        skeletons.extend(pavement.skeletons);
+        perps.extend(pavement.perp_lines);
+        for (polygon, width) in pavement.thickened_lines {
+            let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&polygon)));
+            f.set_property("width", width);
+            thickened.push(f);
+        }
+    }
+
+    let json = serde_json::json!({
+        "input": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(input_polygons))),
+        "skeletons": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(skeletons))),
+        "perps": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(perps))),
+        "thickened": GeoJson::from(thickened),
+    });
+    Ok(json.to_string())
 }
 
 fn err_to_js<E: std::fmt::Display>(err: E) -> JsValue {
