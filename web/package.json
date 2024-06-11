@@ -32,6 +32,7 @@
     "@turf/bbox": "^7.0.0",
     "maplibre-draw-polygon": "github:dabreegster/maplibre-draw-polygon",
     "svelte-maplibre": "^0.9.7",
-    "svelte-utils": "github:a-b-street/svelte-utils"
+    "svelte-utils": "github:a-b-street/svelte-utils",
+    "wkt": "^0.1.1"
   }
 }

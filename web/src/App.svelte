@@ -19,6 +19,8 @@
     PolygonToolLayer,
   } from "maplibre-draw-polygon";
   import Settings from "./Settings.svelte";
+  import { testCases } from "./test_cases";
+  import { parse as parseWkt } from "wkt";
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
@@ -37,6 +39,7 @@
   let map: Map;
   let fileInput: HTMLInputElement;
   let polygonTool: PolygonTool | null = null;
+  let currentTestCase = "";
 
   let inputString = "";
   let cfg = {
@@ -77,6 +80,7 @@
 
   async function loadFile(e: Event) {
     shouldZoom = true;
+    currentTestCase = "";
     inputString = await fileInput.files![0].text();
   }
 
@@ -93,11 +97,19 @@
     polygonTool.addEventListenerSuccess(async (f) => {
       polygonTool = null;
       shouldZoom = true;
+      currentTestCase = "";
       inputString = JSON.stringify(f);
     });
     polygonTool.addEventListenerFailure(() => {
       polygonTool = null;
     });
+  }
+
+  $: if (currentTestCase != "") {
+    // @ts-expect-error
+    let test = testCases[currentTestCase];
+    shouldZoom = true;
+    inputString = JSON.stringify(parseWkt(test));
   }
 </script>
 
@@ -105,54 +117,73 @@
   <div slot="left">
     <h1>Polygon width</h1>
 
-    {#if polygonTool}
-      <PolygonControls {polygonTool} />
-    {:else}
-      <label>
-        Load a .geojson file with polygons
-        <input bind:this={fileInput} on:change={loadFile} type="file" />
-      </label>
+    <details open>
+      <summary>Input</summary>
 
-      <div>
-        <button type="button" on:click={() => startPolygonTool(false)}>
-          Draw your own polygon
-        </button>
-      </div>
+      {#if polygonTool}
+        <PolygonControls {polygonTool} />
+      {:else}
+        <label>
+          Load a .geojson file with polygons
+          <input bind:this={fileInput} on:change={loadFile} type="file" />
+        </label>
 
-      {#if wkt_input}
         <div>
-          <button class="secondary" on:click={() => (showWkt = true)}>
-            Copy polygon as WKT
-          </button>
-          <button
-            class="secondary"
-            on:click={() => startPolygonTool(true)}
-            disabled={polygonTool != null}
-          >
-            Edit polygon
+          <button type="button" on:click={() => startPolygonTool(false)}>
+            Draw your own polygon
           </button>
         </div>
+
+        {#if wkt_input}
+          <div>
+            <button class="secondary" on:click={() => (showWkt = true)}>
+              Copy polygon as WKT
+            </button>
+            <button
+              class="secondary"
+              on:click={() => startPolygonTool(true)}
+              disabled={polygonTool != null}
+            >
+              Edit polygon
+            </button>
+          </div>
+        {/if}
+
+        <label>
+          Choose a test case:
+
+          <select bind:value={currentTestCase}>
+            <option value="">None</option>
+            {#each Object.keys(testCases) as key}
+              <option value={key}>{key}</option>
+            {/each}
+          </select>
+        </label>
       {/if}
-    {/if}
+    </details>
 
     <hr />
 
-    <label>
-      <input type="checkbox" bind:checked={showInput} />
-      Show input polygons
-    </label>
-    <label>
-      <input type="checkbox" bind:checked={showSkeletons} />
-      Show center line
-    </label>
-    <label>
-      <input type="checkbox" bind:checked={showPerps} />
-      Show perpendicular lines
-    </label>
-    <label>
-      <input type="checkbox" bind:checked={showThickened} />
-      Show thickened polygons
-    </label>
+    <details open>
+      <summary>Layers</summary>
+
+      <label>
+        <input type="checkbox" bind:checked={showInput} />
+        Show input polygons
+      </label>
+      <label>
+        <input type="checkbox" bind:checked={showSkeletons} />
+        Show center line
+      </label>
+      <label>
+        <input type="checkbox" bind:checked={showPerps} />
+        Show perpendicular lines
+      </label>
+      <label>
+        <input type="checkbox" bind:checked={showThickened} />
+        Show thickened polygons
+      </label>
+    </details>
 
     <hr />
 
@@ -212,3 +243,10 @@
     <textarea rows="10">{wkt_input}</textarea>
   </Modal>
 {/if}
+
+<style>
+  details {
+    border: 1px solid white;
+    padding: 4px;
+  }
+</style>
