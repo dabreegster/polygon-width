@@ -3,6 +3,7 @@ use std::sync::Once;
 use anyhow::Result;
 use geo::GeometryCollection;
 use geojson::{Feature, FeatureCollection, GeoJson};
+use wkt::ToWkt;
 
 use wasm_bindgen::prelude::*;
 
@@ -25,6 +26,13 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
     let mut thickened = Vec::new();
 
     let (pavements, mercator) = widths::utils::read_gj_input(input, &cfg).map_err(err_to_js)?;
+
+    let wkt_input = if pavements.len() == 1 {
+        mercator.to_wgs84(&pavements[0].polygon).wkt_string()
+    } else {
+        String::new()
+    };
+
     for mut pavement in pavements {
         pavement.calculate(&cfg);
 
@@ -43,6 +51,7 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
         "skeletons": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(skeletons))),
         "perps": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(perps))),
         "thickened": GeoJson::from(thickened),
+        "wkt_input": wkt_input,
     });
     Ok(json.to_string())
 }

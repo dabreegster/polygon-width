@@ -2,6 +2,7 @@
   import "@picocss/pico/css/pico.jade.min.css";
   import init, { findWidths } from "backend";
   import { Layout } from "svelte-utils/two_column_layout";
+  import { Modal } from "svelte-utils";
   import type { Map } from "maplibre-gl";
   import {
     LineLayer,
@@ -25,11 +26,13 @@
   let skeletons: FeatureCollection<LineString> | null = null;
   let perps: FeatureCollection<LineString> | null = null;
   let thickened: FeatureCollection<Polygon, { width: number }> | null = null;
+  let wkt_input = "";
 
   let showInput = true;
   let showSkeletons = true;
   let showPerps = true;
   let showThickened = false;
+  let showWkt = false;
 
   let map: Map;
   let fileInput: HTMLInputElement;
@@ -59,6 +62,7 @@
     skeletons = results.skeletons;
     perps = results.perps;
     thickened = results.thickened;
+    wkt_input = results.wkt_input;
 
     if (shouldZoom) {
       map?.fitBounds(bbox(input!) as [number, number, number, number], {
@@ -105,9 +109,17 @@
         <input bind:this={fileInput} on:change={loadFile} type="file" />
       </label>
 
-      <button type="button" on:click={startPolygonTool}>
-        Draw your own polygon
-      </button>
+      <div>
+        <button type="button" on:click={startPolygonTool}>
+          Draw your own polygon
+        </button>
+      </div>
+
+      {#if wkt_input}
+        <div>
+          <button on:click={() => (showWkt = true)}>Copy polygon as WKT</button>
+        </div>
+      {/if}
     {/if}
 
     <hr />
@@ -181,3 +193,9 @@
     </MapLibre>
   </div>
 </Layout>
+
+{#if showWkt}
+  <Modal on:close={() => (showWkt = false)}>
+    <textarea rows="10">{wkt_input}</textarea>
+  </Modal>
+{/if}
