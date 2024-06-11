@@ -115,6 +115,7 @@
 <Layout>
   <div slot="left">
     <h1>Polygon width</h1>
+    <a href="https://github.com/dabreegster/polygon-width?tab=readme-ov-file#polygon-width" target="_blank">About</a>
 
     <details open>
       <summary>Input</summary>
