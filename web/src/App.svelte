@@ -108,14 +108,23 @@
     // @ts-expect-error
     let test = testCases[currentTestCase];
     shouldZoom = true;
-    inputString = JSON.stringify(parseWkt(test));
+    inputString = JSON.stringify({
+      type: "Feature",
+      geometry: parseWkt(test),
+      properties: {},
+    });
   }
 </script>
 
 <Layout>
   <div slot="left">
     <h1>Polygon width</h1>
-    <a href="https://github.com/dabreegster/polygon-width?tab=readme-ov-file#polygon-width" target="_blank">About</a>
+    <a
+      href="https://github.com/dabreegster/polygon-width?tab=readme-ov-file#polygon-width"
+      target="_blank"
+    >
+      About
+    </a>
 
     <details open>
       <summary>Input</summary>
