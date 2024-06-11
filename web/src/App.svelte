@@ -3,7 +3,13 @@
   import init, { findWidths } from "backend";
   import { Layout } from "svelte-utils/two_column_layout";
   import type { Map } from "maplibre-gl";
-  import { LineLayer, FillLayer, GeoJSON, MapLibre } from "svelte-maplibre";
+  import {
+    LineLayer,
+    FillLayer,
+    GeoJSON,
+    MapLibre,
+    hoverStateFilter,
+  } from "svelte-maplibre";
   import type { FeatureCollection, LineString, Polygon } from "geojson";
   import bbox from "@turf/bbox";
   import {
@@ -72,7 +78,7 @@
       <PolygonControls {polygonTool} />
     {:else}
       <label>
-        Load a .geojson file
+        Load a .geojson file with polygons
         <input bind:this={fileInput} on:change={loadFile} type="file" />
       </label>
 
@@ -89,7 +95,7 @@
     </label>
     <label>
       <input type="checkbox" bind:checked={showSkeletons} />
-      Show skeletons
+      Show center line
     </label>
     <label>
       <input type="checkbox" bind:checked={showPerps} />
@@ -110,36 +116,40 @@
       <PolygonToolLayer />
 
       {#if input}
-        <GeoJSON data={input}
-          ><FillLayer
+        <GeoJSON data={input}>
+          <FillLayer
             paint={{ "fill-color": "black", "fill-opacity": 0.5 }}
             layout={{ visibility: showInput ? "visible" : "none" }}
-          /></GeoJSON
-        >
+          />
+        </GeoJSON>
       {/if}
       {#if skeletons}
-        <GeoJSON data={skeletons}
-          ><LineLayer
-            paint={{ "line-color": "red", "line-width": 2 }}
+        <GeoJSON data={skeletons} generateId>
+          <LineLayer
+            manageHoverState
+            paint={{
+              "line-color": hoverStateFilter("red", "blue"),
+              "line-width": 4,
+            }}
             layout={{ visibility: showSkeletons ? "visible" : "none" }}
-          /></GeoJSON
-        >
+          />
+        </GeoJSON>
       {/if}
       {#if perps}
-        <GeoJSON data={perps}
-          ><LineLayer
-            paint={{ "line-color": "green", "line-width": 1 }}
+        <GeoJSON data={perps}>
+          <LineLayer
+            paint={{ "line-color": "green", "line-width": 2 }}
             layout={{ visibility: showPerps ? "visible" : "none" }}
-          /></GeoJSON
-        >
+          />
+        </GeoJSON>
       {/if}
       {#if thickened}
-        <GeoJSON data={thickened}
-          ><FillLayer
+        <GeoJSON data={thickened}>
+          <FillLayer
             paint={{ "fill-color": "cyan", "fill-opacity": 0.5 }}
             layout={{ visibility: showThickened ? "visible" : "none" }}
-          /></GeoJSON
-        >
+          />
+        </GeoJSON>
       {/if}
     </MapLibre>
   </div>
