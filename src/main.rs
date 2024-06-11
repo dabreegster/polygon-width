@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use gdal::{vector::LayerAccess, Dataset};
-use geo::{Geometry, GeometryCollection};
+use geo::{Geometry, GeometryCollection, Polygon};
 use geojson::{Feature, FeatureCollection, GeoJson};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -13,9 +13,9 @@ mod step_along_line;
 
 fn main() -> Result<()> {
     //let (pavements, mercator) = read_gj_input("test_input/small_pavements.geojson")?;
-    let (pavements, mercator) = read_gj_input("test_input/small_road_polygons.geojson")?;
+    //let (pavements, mercator) = read_gj_input("test_input/small_road_polygons.geojson")?;
     //let (pavements, mercator) = read_gj_input("test_input/dissolved_roads.geojson")?;
-    //let pavements = read_gpkg_input("test_input/large.gpkg", "Roadside")?;
+    let (pavements, mercator) = read_gpkg_input("test_input/large.gpkg", "Roadside")?;
     //let pavements = read_gpkg_input("test_input/large.gpkg", "Road Or Track")?;
 
     let mut input_polygons = Vec::new();
@@ -82,26 +82,19 @@ fn read_gj_input(filename: &str) -> Result<(Vec<pavement::Pavement>, Mercator)> 
         }
     }
 
-    // TODO Expensive clone
-    let collection = GeometryCollection::from(wgs84_polygons.clone());
-    let mercator = Mercator::from(collection).unwrap();
-
-    let mut results = Vec::new();
-    for mut p in wgs84_polygons {
-        mercator.to_mercator_in_place(&mut p);
-        results.push(pavement::Pavement::new(p));
-    }
-
-    Ok((results, mercator))
+    Ok(to_mercator(wgs84_polygons))
 }
 
 #[allow(unused)]
-fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<Vec<pavement::Pavement>> {
-    let mut results = Vec::new();
+fn read_gpkg_input(
+    filename: &str,
+    descriptive_group: &str,
+) -> Result<(Vec<pavement::Pavement>, Mercator)> {
+    let mut polygons = Vec::new();
     let dataset = Dataset::open(filename)?;
     // Assume only one layer
     let mut layer = dataset.layer(0)?;
-    for feature in layer.features() {
+    for mut feature in layer.features() {
         if feature
             .field_as_string_by_name("descriptive_group")?
             .unwrap()
@@ -116,7 +109,22 @@ fn read_gpkg_input(filename: &str, descriptive_group: &str) -> Result<Vec<paveme
         let Geometry::Polygon(polygon) = feature.geometry().unwrap().to_geo()? else {
             continue;
         };
-        results.push(pavement::Pavement::new(polygon));
+        polygons.push(polygon);
     }
-    Ok(results)
+
+    Ok(to_mercator(polygons))
+}
+
+fn to_mercator(polygons: Vec<Polygon>) -> (Vec<pavement::Pavement>, Mercator) {
+    // TODO Expensive clone
+    let collection = GeometryCollection::from(polygons.clone());
+    let mercator = Mercator::from(collection).unwrap();
+
+    let mut results = Vec::new();
+    for mut p in polygons {
+        mercator.to_mercator_in_place(&mut p);
+        results.push(pavement::Pavement::new(p));
+    }
+
+    (results, mercator)
 }
