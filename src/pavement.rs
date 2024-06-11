@@ -46,7 +46,8 @@ impl Pavement {
         let avoid_boundaries_threshold = 0.1;
 
         let mut skeletons = Vec::new();
-        for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, true) {
+        // TODO true/false here seems to depend on using Mercator
+        for line in geo_buffer::skeleton_of_polygon_to_linestring(&self.polygon, false) {
             // There are some huge lines that totally escape the polygon.
             if !self.polygon.contains(&line) {
                 continue;
