@@ -9,6 +9,8 @@ Try it out: <https://dabreegster.github.io/polygon-width>
 
 ## How it works
 
+TODO: Outdated, there are more refinements now
+
 1. Calculate a straight skeleton of each polygon, currently using [geo_buffer](https://docs.rs/geo-buffer/latest/geo_buffer/fn.skeleton_of_polygon_to_linestring.html)
 2. Clean up that output to get the "center line" of the polygon
 3. Walk along that line at regular intervals

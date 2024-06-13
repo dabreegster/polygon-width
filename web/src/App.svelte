@@ -52,6 +52,7 @@
     remove_short_skeletons: 0.1,
 
     make_perps_step_size: 5.0,
+    perp_midpoint_ratio: 0.5,
   };
   let shouldZoom = true;
 

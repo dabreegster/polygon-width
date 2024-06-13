@@ -44,6 +44,12 @@
     bind:value={cfg.make_perps_step_size}
     defaultNumber={5.0}
   />
+
+  <OptionalNumber
+    label="If the ratio of lengths between each 'half' of a perpendicular line is less than this, skip it"
+    bind:value={cfg.perp_midpoint_ratio}
+    defaultNumber={0.5}
+  />
 </details>
 
 <style>

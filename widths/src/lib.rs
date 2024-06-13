@@ -46,9 +46,7 @@ impl Pavement {
 
     pub fn calculate(&mut self, cfg: &Config) {
         self.skeletonize(cfg);
-        if let Some(step_size) = cfg.make_perps_step_size {
-            self.make_perp_lines(step_size);
-        }
+        self.make_perp_lines(cfg);
     }
 
     fn skeletonize(&mut self, cfg: &Config) {
@@ -114,8 +112,11 @@ impl Pavement {
         }
     }
 
-    fn make_perp_lines(&mut self, step_size_meters: f64) {
-        let project_away_meters = 10.0;
+    fn make_perp_lines(&mut self, cfg: &Config) {
+        let Some(step_size_meters) = cfg.make_perps_step_size else {
+            return;
+        };
+        let project_away_meters = 100.0;
 
         for skeleton in &self.skeletons {
             let mut thickened_points = Vec::new();
@@ -123,7 +124,8 @@ impl Pavement {
                 let pt1 = project_away(pt, angle - 90.0, project_away_meters);
                 let pt2 = project_away(pt, angle + 90.0, project_away_meters);
 
-                let Some(perp) = clip_line_to_polygon(&self.polygon, Line::new(pt1, pt2)) else {
+                let Some(perp) = clip_line_to_polygon(&self.polygon, pt, Line::new(pt1, pt2), cfg)
+                else {
                     continue;
                 };
                 let width = perp.euclidean_length();
@@ -172,7 +174,12 @@ fn project_away(pt: Coord, angle_degrees: f64, distance: f64) -> Coord {
     }
 }
 
-fn clip_line_to_polygon(polygon: &Polygon, line: Line) -> Option<Line> {
+fn clip_line_to_polygon(
+    polygon: &Polygon,
+    midpoint: Coord,
+    line: Line,
+    cfg: &Config,
+) -> Option<Line> {
     let mut hits = Vec::new();
     for polygon_line in polygon.exterior().lines() {
         if let Some(LineIntersection::SinglePoint { intersection, .. }) =
@@ -181,10 +188,29 @@ fn clip_line_to_polygon(polygon: &Polygon, line: Line) -> Option<Line> {
             hits.push(intersection);
         }
     }
-    if hits.len() == 2 {
-        return Some(Line::new(hits[0], hits[1]));
+
+    // The line might hit the polygon at more than 2 points. Find the two closest hits to the
+    // the midpoint (of the clipped line we should return)
+    hits.sort_by_key(|pt| (midpoint.euclidean_distance(pt) * 1000.0) as usize);
+    if hits.len() < 2 {
+        return None;
     }
-    None
+
+    // Check if midpoint is really acting like a midpoint. There are false positives near sharp
+    // corners, where the left and right projection are very different. This requires midpoint to
+    // really be on the polygon's center line.
+    if let Some(threshold) = cfg.perp_midpoint_ratio {
+        let mut dist1 = hits[0].euclidean_distance(&midpoint);
+        let mut dist2 = hits[1].euclidean_distance(&midpoint);
+        if dist1 > dist2 {
+            std::mem::swap(&mut dist1, &mut dist2);
+        }
+        if dist1 / dist2 < threshold {
+            return None;
+        }
+    }
+
+    Some(Line::new(hits[0], hits[1]))
 }
 
 #[derive(Deserialize)]
@@ -199,6 +225,7 @@ pub struct Config {
     pub remove_short_skeletons: Option<f64>,
 
     pub make_perps_step_size: Option<f64>,
+    pub perp_midpoint_ratio: Option<f64>,
 }
 
 impl Config {
@@ -212,6 +239,7 @@ impl Config {
             remove_short_skeletons: Some(0.1),
 
             make_perps_step_size: Some(5.0),
+            perp_midpoint_ratio: Some(0.5),
         }
     }
 }
