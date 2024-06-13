@@ -2,7 +2,8 @@ use anyhow::Result;
 use gdal::{vector::LayerAccess, Dataset};
 use geo::{Geometry, GeometryCollection};
 use geojson::{Feature, FeatureCollection, GeoJson};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use rayon::prelude::*;
 
 use widths::{
     utils::{read_gj_input, to_mercator},
@@ -36,11 +37,18 @@ fn main() -> Result<()> {
 
     let progress = ProgressBar::new(pavements.len() as u64).with_style(ProgressStyle::with_template(
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
+    let pavements: Vec<Pavement> = pavements
+        .into_par_iter()
+        .progress_with(progress)
+        .map(|mut pavement| {
+            pavement.calculate(&cfg);
+            pavement
+        })
+        .collect();
+    // TODO Long lag here, it might be the collect part?
+    println!("Generating output");
 
-    for mut pavement in pavements {
-        progress.inc(1);
-        pavement.calculate(&cfg);
-
+    for pavement in pavements {
         input_polygons.push(pavement.polygon);
         skeletons.extend(pavement.skeletons);
         perps.extend(pavement.perp_lines);
