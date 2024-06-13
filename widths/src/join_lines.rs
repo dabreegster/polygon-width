@@ -1,83 +1,117 @@
-use geo::LineString;
+use std::collections::BTreeSet;
 
-// TODO Upstream to geo
+use geo::{Coord, EuclideanLength, LineString};
+use petgraph::graphmap::UnGraphMap;
 
-// TODO This is chatgpt output that seems sane to me, but I think it needs to be a fixed-point
-// algorithm and keep joining until there are no changes. Maybe union-find would help. Also need to
-// be careful near loops (or remove holes first).
-pub fn join_linestrings(lines: Vec<LineString>) -> Vec<LineString> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct HashedPoint(isize, isize);
+
+#[derive(Clone, Copy, PartialEq)]
+struct EdgeIdx(usize);
+
+impl HashedPoint {
+    fn new(pt: Coord) -> Self {
+        Self((pt.x * 1_000_000.0) as isize, (pt.y * 1_000_000.0) as isize)
+    }
+}
+
+pub fn join_linestrings(mut lines: Vec<LineString>) -> Vec<LineString> {
+    loop {
+        // Build a graph from the lines
+        let mut intersections: BTreeSet<HashedPoint> = BTreeSet::new();
+        let mut graph: UnGraphMap<HashedPoint, EdgeIdx> = UnGraphMap::new();
+
+        for (idx, line) in lines.iter().enumerate() {
+            let i1 = HashedPoint::new(*line.0.first().unwrap());
+            let i2 = HashedPoint::new(*line.0.last().unwrap());
+            intersections.insert(i1);
+            intersections.insert(i2);
+            graph.add_edge(i1, i2, EdgeIdx(idx));
+        }
+
+        if let Some(path) = find_longest_path(&graph, &lines, &intersections) {
+            lines = join_path(lines, path);
+        } else {
+            return lines;
+        }
+    }
+}
+
+// Of length > 1
+fn find_longest_path(
+    graph: &UnGraphMap<HashedPoint, EdgeIdx>,
+    edges: &Vec<LineString>,
+    intersections: &BTreeSet<HashedPoint>,
+) -> Option<Vec<EdgeIdx>> {
+    let mut best_path = Vec::new();
+    let mut best_length = 0.0;
+
+    // If we had DAGs, we could try Dijkstra with negative edge weights. For now, just brute-force
+    // it -- the graphs should be tiny
+    for src in intersections {
+        for dst in intersections {
+            if src == dst {
+                continue;
+            }
+            if let Some((length, path)) = petgraph::algo::astar(
+                graph,
+                *src,
+                |i| i == *dst,
+                |(_, _, idx)| edges[idx.0].euclidean_length(),
+                |_| 0.0,
+            ) {
+                if path.len() > 2 && length > best_length {
+                    best_length = length;
+                    best_path = path;
+                }
+            }
+        }
+    }
+
     let mut result = Vec::new();
-    let mut used = vec![false; lines.len()];
-
-    for i in 0..lines.len() {
-        if used[i] {
-            continue;
-        }
-
-        let mut current = lines[i].clone();
-        used[i] = true;
-
-        loop {
-            let mut merged = false;
-
-            for j in 0..lines.len() {
-                if used[j] {
-                    continue;
-                }
-
-                if has_common_endpoint(&current, &lines[j]) {
-                    current = join(current, lines[j].clone());
-                    used[j] = true;
-                    merged = true;
-                    break;
-                }
-            }
-
-            if !merged {
-                break;
-            }
-        }
-
-        result.push(current);
+    for pair in best_path.windows(2) {
+        result.push(*graph.edge_weight(pair[0], pair[1]).unwrap());
     }
-
-    result
-}
-
-fn has_common_endpoint(ls1: &LineString, ls2: &LineString) -> bool {
-    let start1 = ls1.0[0];
-    let end1 = ls1.0[ls1.0.len() - 1];
-    let start2 = ls2.0[0];
-    let end2 = ls2.0[ls2.0.len() - 1];
-
-    start1 == start2 || start1 == end2 || end1 == start2 || end1 == end2
-}
-
-// Must be called when share_endpoint is true. The order of points might change arbitrarily.
-fn join(ls1: LineString, ls2: LineString) -> LineString {
-    let mut coords1 = ls1.into_inner();
-    let mut coords2 = ls2.into_inner();
-
-    // TODO Fuzzy comparison?
-    if coords1.first() == coords2.first() {
-        coords1.reverse();
-        coords1.pop();
-        coords1.extend(coords2);
-        LineString::from(coords1)
-    } else if coords1.first() == coords2.last() {
-        coords2.pop();
-        coords2.extend(coords1);
-        LineString::from(coords2)
-    } else if coords1.last() == coords2.first() {
-        coords1.pop();
-        coords1.extend(coords2);
-        LineString::from(coords1)
-    } else if coords1.last() == coords2.last() {
-        coords2.reverse();
-        coords1.pop();
-        coords1.extend(coords2);
-        LineString::from(coords1)
+    if result.is_empty() {
+        None
     } else {
-        unreachable!()
+        Some(result)
     }
+}
+
+// Combines everything in the path, returning a smaller list of lines
+fn join_path(lines: Vec<LineString>, path: Vec<EdgeIdx>) -> Vec<LineString> {
+    // Build up the joined line
+    let mut points = Vec::new();
+    for idx in &path {
+        let mut next = lines[idx.0].clone().into_inner();
+        if points.is_empty() {
+            points = next;
+        } else if points.first() == next.first() {
+            points.reverse();
+            points.pop();
+            points.extend(next);
+        } else if points.first() == next.last() {
+            next.pop();
+            next.extend(points);
+            points = next;
+        } else if points.last() == next.first() {
+            points.pop();
+            points.extend(next);
+        } else if points.last() == next.last() {
+            next.reverse();
+            points.pop();
+            points.extend(next);
+        } else {
+            unreachable!()
+        }
+    }
+    let joined = LineString::new(points);
+    let mut result = vec![joined];
+    for (i, line) in lines.into_iter().enumerate() {
+        if !path.contains(&EdgeIdx(i)) {
+            result.push(line);
+        }
+    }
+    result
 }
