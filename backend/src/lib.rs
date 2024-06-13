@@ -39,9 +39,10 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
         input_polygons.push(pavement.polygon);
         skeletons.extend(pavement.skeletons);
         perps.extend(pavement.perp_lines);
-        for (polygon, width) in pavement.thickened_lines {
+        for (polygon, width1, width2) in pavement.thickened_lines {
             let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&polygon)));
-            f.set_property("width", width);
+            f.set_property("width1", width1);
+            f.set_property("width2", width2);
             thickened.push(f);
         }
     }

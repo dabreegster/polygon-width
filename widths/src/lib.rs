@@ -20,8 +20,8 @@ pub struct Pavement {
     // regularly spaced lines that measure width
     pub perp_lines: Vec<Line>,
 
-    // thickened center lines, along with their width
-    pub thickened_lines: Vec<(Polygon, f64)>,
+    // thickened center lines, along with their width at each end
+    pub thickened_lines: Vec<(Polygon, f64, f64)>,
 }
 
 impl Pavement {
@@ -105,6 +105,7 @@ impl Pavement {
         let project_away_meters = 10.0;
 
         for skeleton in &self.skeletons {
+            let mut thickened_points = Vec::new();
             for (pt, angle) in crate::step_along_line::step_along_line(skeleton, step_size_meters) {
                 let pt1 = project_away(pt, angle - 90.0, project_away_meters);
                 let pt2 = project_away(pt, angle + 90.0, project_away_meters);
@@ -115,17 +116,35 @@ impl Pavement {
                 let width = perp.euclidean_length();
                 // TODO Oh hey, happens to be a good heuristic to prune out weird stuff?!
                 if width == 0.0 {
+                    // TODO remove this skeleton???
                     continue;
                 }
 
                 self.perp_lines.push(perp);
 
+                thickened_points.push((pt, angle, width));
+            }
+
+            // Make thickened polygons that may have different widths on each end
+            // TODO Make sure we have points at the very start and end. Ideally we do that with
+            // step_along_line
+            for pair in thickened_points.windows(2) {
+                let (pt1, angle1, width1) = pair[0];
+                let (pt2, angle2, width2) = pair[1];
+
                 self.thickened_lines.push((
-                    thicken(
-                        Line::new(pt, project_away(pt, angle, step_size_meters)),
-                        width,
+                    Polygon::new(
+                        LineString::new(vec![
+                            project_away(pt1, angle1 - 90.0, width1 / 2.0),
+                            project_away(pt1, angle1 + 90.0, width1 / 2.0),
+                            project_away(pt2, angle2 + 90.0, width2 / 2.0),
+                            project_away(pt2, angle2 - 90.0, width2 / 2.0),
+                            project_away(pt1, angle1 - 90.0, width1 / 2.0),
+                        ]),
+                        Vec::new(),
                     ),
-                    width,
+                    width1,
+                    width2,
                 ));
             }
         }
@@ -153,24 +172,6 @@ fn clip_line_to_polygon(polygon: &Polygon, line: Line) -> Option<Line> {
         return Some(Line::new(hits[0], hits[1]));
     }
     None
-}
-
-fn thicken(line: Line, width: f64) -> Polygon {
-    let angle = line_angle_degrees(line);
-    Polygon::new(
-        LineString::new(vec![
-            project_away(line.start, angle - 90.0, width / 2.0),
-            project_away(line.start, angle + 90.0, width / 2.0),
-            project_away(line.end, angle + 90.0, width / 2.0),
-            project_away(line.end, angle - 90.0, width / 2.0),
-            project_away(line.start, angle - 90.0, width / 2.0),
-        ]),
-        Vec::new(),
-    )
-}
-
-fn line_angle_degrees(line: Line) -> f64 {
-    line.dy().atan2(line.dx()).to_degrees()
 }
 
 #[derive(Deserialize)]
