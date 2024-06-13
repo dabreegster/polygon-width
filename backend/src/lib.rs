@@ -33,7 +33,9 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
         String::new()
     };
 
-    for mut pavement in pavements {
+    let len = pavements.len();
+    for (idx, mut pavement) in pavements.into_iter().enumerate() {
+        log::info!("Working on input {idx} / {len}");
         pavement.calculate(&cfg);
 
         input_polygons.push(pavement.polygon);

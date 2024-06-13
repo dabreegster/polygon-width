@@ -87,18 +87,25 @@ fn join_path(lines: Vec<LineString>, path: Vec<EdgeIdx>) -> Vec<LineString> {
         let mut next = lines[idx.0].clone().into_inner();
         if points.is_empty() {
             points = next;
-        } else if points.first() == next.first() {
+            continue;
+        }
+        let pt1 = HashedPoint::new(*points.first().unwrap());
+        let pt2 = HashedPoint::new(*points.last().unwrap());
+        let pt3 = HashedPoint::new(*next.first().unwrap());
+        let pt4 = HashedPoint::new(*next.last().unwrap());
+
+        if pt1 == pt3 {
             points.reverse();
             points.pop();
             points.extend(next);
-        } else if points.first() == next.last() {
+        } else if pt1 == pt4 {
             next.pop();
             next.extend(points);
             points = next;
-        } else if points.last() == next.first() {
+        } else if pt2 == pt3 {
             points.pop();
             points.extend(next);
-        } else if points.last() == next.last() {
+        } else if pt2 == pt4 {
             next.reverse();
             points.pop();
             points.extend(next);
