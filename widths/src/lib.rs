@@ -92,11 +92,24 @@ impl Pavement {
             if skeletons.is_empty() {
                 continue;
             }
+
             if cfg.join_skeletons {
                 self.skeletons = crate::join_lines::join_linestrings(skeletons);
             } else {
                 self.skeletons = skeletons;
             }
+
+            if let Some(threshold) = cfg.remove_short_skeletons {
+                let longest_len = self
+                    .skeletons
+                    .iter()
+                    .map(|ls| ls.euclidean_length())
+                    .max_by_key(|len| (len * 1000.0) as usize)
+                    .unwrap();
+                self.skeletons
+                    .retain(|ls| ls.euclidean_length() / longest_len >= threshold);
+            }
+
             break;
         }
     }
@@ -182,6 +195,8 @@ pub struct Config {
     pub filter_skeletons_outside: bool,
     pub filter_skeletons_near_boundary: Option<f64>,
     pub join_skeletons: bool,
+    // When the ratio of a line to the longest line is less than this threshold, remove it
+    pub remove_short_skeletons: Option<f64>,
 
     pub make_perps_step_size: Option<f64>,
 }
@@ -194,6 +209,7 @@ impl Config {
             filter_skeletons_outside: true,
             filter_skeletons_near_boundary: Some(0.1),
             join_skeletons: true,
+            remove_short_skeletons: Some(0.1),
 
             make_perps_step_size: Some(5.0),
         }

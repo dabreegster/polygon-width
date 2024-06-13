@@ -34,6 +34,12 @@
   </div>
 
   <OptionalNumber
+    label="Remove short skeleton lines less than this ratio (to the longest)"
+    bind:value={cfg.remove_short_skeletons}
+    defaultNumber={0.1}
+  />
+
+  <OptionalNumber
     label="Generate perpendicular lines at this step size (m)"
     bind:value={cfg.make_perps_step_size}
     defaultNumber={5.0}

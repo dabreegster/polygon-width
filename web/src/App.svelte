@@ -48,6 +48,7 @@
     filter_skeletons_outside: true,
     filter_skeletons_near_boundary: 0.1,
     join_skeletons: true,
+    remove_short_skeletons: 0.1,
 
     make_perps_step_size: 5.0,
   };
