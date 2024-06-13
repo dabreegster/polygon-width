@@ -181,11 +181,16 @@ fn clip_line_to_polygon(
     cfg: &Config,
 ) -> Option<Line> {
     let mut hits = Vec::new();
-    for polygon_line in polygon.exterior().lines() {
-        if let Some(LineIntersection::SinglePoint { intersection, .. }) =
-            geo::algorithm::line_intersection::line_intersection(line, polygon_line)
-        {
-            hits.push(intersection);
+    for boundary in vec![polygon.exterior()]
+        .into_iter()
+        .chain(polygon.interiors())
+    {
+        for polygon_line in boundary.lines() {
+            if let Some(LineIntersection::SinglePoint { intersection, .. }) =
+                geo::algorithm::line_intersection::line_intersection(line, polygon_line)
+            {
+                hits.push(intersection);
+            }
         }
     }
 
