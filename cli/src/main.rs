@@ -10,14 +10,24 @@ use widths::{
 };
 
 fn main() -> Result<()> {
+    env_logger::init();
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        println!("Call with a .geojson or .gpkg file in WGS84");
+        std::process::exit(1);
+    }
+
     let cfg = Config::default();
-    let (pavements, mercator) = read_gj_input(
-        std::fs::read_to_string("../test_input/small_pavements.geojson")?,
-        &cfg,
-    )?;
-    //let (pavements, mercator) = read_gj_input(std::fs::read_to_string("../test_input/small_road_polygons.geojson")?)?;
-    //let (pavements, mercator) = read_gpkg_input("../test_input/large.gpkg", "Roadside")?;
-    //let pavements = read_gpkg_input("../test_input/large.gpkg", "Road Or Track")?;
+    let (pavements, mercator) = if args[1].ends_with(".geojson") {
+        read_gj_input(std::fs::read_to_string(&args[1])?, &cfg)?
+    } else if args[1].ends_with(".gpkg") {
+        // TODO Take a flag to decide which one, or do the filtering elsewhere?
+        read_gpkg_input("../test_input/large.gpkg", "Roadside", &cfg)?
+        //read_gpkg_input("../test_input/large.gpkg", "Road Or Track", &cfg)?
+    } else {
+        println!("Call with a .geojson or .gpkg file in WGS84");
+        std::process::exit(1);
+    };
 
     let mut input_polygons = Vec::new();
     let mut skeletons = Vec::new();
