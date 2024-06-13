@@ -3,6 +3,7 @@
   import init, { findWidths } from "backend";
   import { Layout } from "svelte-utils/two_column_layout";
   import { Modal } from "svelte-utils";
+  import { Popup } from "svelte-utils/map";
   import type { Map } from "maplibre-gl";
   import {
     LineLayer,
@@ -239,11 +240,23 @@
         </GeoJSON>
       {/if}
       {#if thickened}
-        <GeoJSON data={thickened}>
+        <GeoJSON data={thickened} generateId>
           <FillLayer
-            paint={{ "fill-color": "cyan", "fill-opacity": 0.5 }}
+            manageHoverState
+            paint={{
+              "fill-color": "cyan",
+              "fill-opacity": hoverStateFilter(0.5, 0.8),
+            }}
             layout={{ visibility: showThickened ? "visible" : "none" }}
-          />
+          >
+            <Popup let:props>
+              <p>
+                Width between {props.width1.toFixed(1)}m and {props.width2.toFixed(
+                  1,
+                )}m
+              </p>
+            </Popup>
+          </FillLayer>
         </GeoJSON>
       {/if}
     </MapLibre>
