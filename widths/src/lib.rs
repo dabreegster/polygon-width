@@ -1,5 +1,6 @@
 mod join_lines;
 mod mercator;
+mod split_line;
 mod step_along_line;
 pub mod utils;
 
@@ -22,6 +23,9 @@ pub struct Pavement {
 
     // thickened center lines, along with their width at each end
     pub thickened_lines: Vec<(Polygon, f64, f64)>,
+
+    // The center line and its width, split up into when the width changes past some threshold
+    pub center_with_width: Vec<(LineString, f64)>,
 }
 
 impl Pavement {
@@ -41,6 +45,7 @@ impl Pavement {
             skeletons: Vec::new(),
             perp_lines: Vec::new(),
             thickened_lines: Vec::new(),
+            center_with_width: Vec::new(),
         }
     }
 
@@ -162,6 +167,15 @@ impl Pavement {
                     width2,
                 ));
             }
+
+            self.center_with_width.extend(split_line::split(
+                skeleton,
+                thickened_points
+                    .into_iter()
+                    .map(|(pt, _, width)| (pt, width))
+                    .collect(),
+                cfg.width_granularity,
+            ));
         }
     }
 }
@@ -231,6 +245,9 @@ pub struct Config {
 
     pub make_perps_step_size: Option<f64>,
     pub perp_midpoint_ratio: Option<f64>,
+
+    // For producing center_with_width, split the line when width differs by more than this amount
+    pub width_granularity: f64,
 }
 
 impl Config {
@@ -245,6 +262,8 @@ impl Config {
 
             make_perps_step_size: Some(5.0),
             perp_midpoint_ratio: Some(0.5),
+
+            width_granularity: 0.5,
         }
     }
 }

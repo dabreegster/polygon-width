@@ -28,13 +28,19 @@
   let input: FeatureCollection<Polygon> | null = null;
   let skeletons: FeatureCollection<LineString> | null = null;
   let perps: FeatureCollection<LineString> | null = null;
-  let thickened: FeatureCollection<Polygon, { width: number }> | null = null;
+  let thickened: FeatureCollection<
+    Polygon,
+    { width1: number; width2: number }
+  > | null = null;
+  let centerWithWidth: FeatureCollection<LineString, { width: number }> | null =
+    null;
   let wkt_input = "";
 
   let showInput = true;
   let showSkeletons = true;
   let showPerps = true;
   let showThickened = false;
+  let showCenterWithWidth = false;
   let showWkt = false;
 
   let map: Map;
@@ -53,6 +59,8 @@
 
     make_perps_step_size: 5.0,
     perp_midpoint_ratio: 0.5,
+
+    width_granularity: 0.5,
   };
   let shouldZoom = true;
 
@@ -67,6 +75,7 @@
     skeletons = results.skeletons;
     perps = results.perps;
     thickened = results.thickened;
+    centerWithWidth = results.center_with_width;
     wkt_input = results.wkt_input;
 
     if (shouldZoom) {
@@ -197,6 +206,10 @@
         <input type="checkbox" bind:checked={showThickened} />
         Show thickened polygons
       </label>
+      <label>
+        <input type="checkbox" bind:checked={showCenterWithWidth} />
+        Show center lines with width
+      </label>
     </details>
 
     <hr />
@@ -258,6 +271,22 @@
               </p>
             </Popup>
           </FillLayer>
+        </GeoJSON>
+      {/if}
+      {#if centerWithWidth}
+        <GeoJSON data={centerWithWidth} generateId>
+          <LineLayer
+            manageHoverState
+            paint={{
+              "line-color": hoverStateFilter("purple", "black"),
+              "line-width": 6,
+            }}
+            layout={{ visibility: showCenterWithWidth ? "visible" : "none" }}
+          >
+            <Popup let:props>
+              <p>{props.width.toFixed(1)}m</p>
+            </Popup>
+          </LineLayer>
         </GeoJSON>
       {/if}
     </MapLibre>

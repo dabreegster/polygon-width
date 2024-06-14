@@ -34,6 +34,7 @@ fn main() -> Result<()> {
     let mut skeletons = Vec::new();
     let mut perps = Vec::new();
     let mut thickened = Vec::new();
+    let mut center_with_width = Vec::new();
 
     let progress = ProgressBar::new(pavements.len() as u64).with_style(ProgressStyle::with_template(
         "[{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})").unwrap());
@@ -58,6 +59,11 @@ fn main() -> Result<()> {
             f.set_property("width2", width2);
             thickened.push(f);
         }
+        for (ls, width) in pavement.center_with_width {
+            let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&ls)));
+            f.set_property("width", width);
+            center_with_width.push(f);
+        }
     }
 
     dump_gj("output/input_polygons.geojson", &mercator, input_polygons)?;
@@ -69,6 +75,12 @@ fn main() -> Result<()> {
         serde_json::to_string(&GeoJson::from(thickened))?,
     )?;
     println!("Wrote output/thickened.geojson");
+
+    std::fs::write(
+        "output/center_with_width.geojson",
+        serde_json::to_string(&GeoJson::from(center_with_width))?,
+    )?;
+    println!("Wrote output/center_with_width.geojson");
 
     Ok(())
 }

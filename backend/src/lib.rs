@@ -24,6 +24,7 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
     let mut skeletons = Vec::new();
     let mut perps = Vec::new();
     let mut thickened = Vec::new();
+    let mut center_with_width = Vec::new();
 
     let (pavements, mercator) = widths::utils::read_gj_input(input, &cfg).map_err(err_to_js)?;
 
@@ -47,6 +48,11 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
             f.set_property("width2", width2);
             thickened.push(f);
         }
+        for (ls, width) in pavement.center_with_width {
+            let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&ls)));
+            f.set_property("width", width);
+            center_with_width.push(f);
+        }
     }
 
     let json = serde_json::json!({
@@ -54,6 +60,7 @@ pub fn find_widths(input: String, raw_cfg: JsValue) -> Result<String, JsValue> {
         "skeletons": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(skeletons))),
         "perps": FeatureCollection::from(&mercator.to_wgs84(&GeometryCollection::from_iter(perps))),
         "thickened": GeoJson::from(thickened),
+        "center_with_width": GeoJson::from(center_with_width),
         "wkt_input": wkt_input,
     });
     Ok(json.to_string())

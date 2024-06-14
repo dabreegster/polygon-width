@@ -50,6 +50,13 @@
     bind:value={cfg.perp_midpoint_ratio}
     defaultNumber={0.5}
   />
+
+  <div>
+    <label>
+      Granularity of width (m) in center lines
+      <input type="number" bind:value={cfg.width_granularity} />
+    </label>
+  </div>
 </details>
 
 <style>
