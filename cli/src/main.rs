@@ -1,6 +1,6 @@
 use anyhow::Result;
 use gdal::{vector::LayerAccess, Dataset};
-use geo::{Geometry, GeometryCollection};
+use geo::{Area, EuclideanLength, Geometry, GeometryCollection};
 use geojson::{Feature, FeatureCollection, GeoJson};
 use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
 use rayon::prelude::*;
@@ -23,8 +23,8 @@ fn main() -> Result<()> {
         read_gj_input(std::fs::read_to_string(&args[1])?, &cfg)?
     } else if args[1].ends_with(".gpkg") {
         // TODO Take a flag to decide which one, or do the filtering elsewhere?
-        read_gpkg_input("../test_input/large.gpkg", "Roadside", &cfg)?
-        //read_gpkg_input("../test_input/large.gpkg", "Road Or Track", &cfg)?
+        //read_gpkg_input("../test_input/large.gpkg", "Roadside", &cfg)?
+        read_gpkg_input("../test_input/large.gpkg", "Road Or Track", &cfg)?
     } else {
         println!("Call with a .geojson or .gpkg file in WGS84");
         std::process::exit(1);
@@ -112,5 +112,30 @@ fn read_gpkg_input(
         polygons.push(polygon);
     }
 
-    Ok(to_mercator(polygons, cfg))
+    let (mut pavements, mercator) = to_mercator(polygons, cfg);
+
+    // Filter out junctions, only keep roads
+    if descriptive_group == "Road Or Track" {
+        //let mut debug = Vec::new();
+        pavements.retain(|pavement| {
+            let boundary_len = pavement.polygon.exterior().euclidean_length();
+            let area = pavement.polygon.unsigned_area();
+            let ratio = boundary_len / area;
+            /*let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&pavement.polygon)));
+            f.set_property("len", boundary_len);
+            f.set_property("area", area);
+            f.set_property("ratio", ratio);
+            debug.push(f);*/
+
+            ratio < 0.3
+        });
+        /*std::fs::write(
+            "ratios.geojson",
+            serde_json::to_string(&GeoJson::from(tmp))?,
+        )?;*/
+    }
+    // TODO Faster dev
+    pavements.truncate(500);
+
+    Ok((pavements, mercator))
 }
