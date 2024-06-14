@@ -144,6 +144,9 @@ impl Pavement {
 
                 thickened_points.push((pt, angle, width));
             }
+            if thickened_points.len() < 2 {
+                continue;
+            }
 
             // Make thickened polygons that may have different widths on each end
             // TODO Make sure we have points at the very start and end. Ideally we do that with
