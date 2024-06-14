@@ -11,6 +11,7 @@
     label="Remove holes in input polygons larger than this area (sq m)"
     bind:value={cfg.remove_holes}
     defaultNumber={100}
+    step={1}
   />
 
   <div>
@@ -24,6 +25,7 @@
     label="Filter skeleton lines closer than this to the boundary (m)"
     bind:value={cfg.filter_skeletons_near_boundary}
     defaultNumber={0.1}
+    step={1}
   />
 
   <div>
@@ -37,24 +39,32 @@
     label="Remove short skeleton lines less than this ratio (to the longest)"
     bind:value={cfg.remove_short_skeletons}
     defaultNumber={0.1}
+    step={0.1}
   />
 
   <OptionalNumber
     label="Generate perpendicular lines at this step size (m)"
     bind:value={cfg.make_perps_step_size}
     defaultNumber={5.0}
+    step={0.5}
   />
 
   <OptionalNumber
     label="If the ratio of lengths between each 'half' of a perpendicular line is less than this, skip it"
     bind:value={cfg.perp_midpoint_ratio}
     defaultNumber={0.5}
+    step={0.1}
   />
 
   <div>
     <label>
       Granularity of width (m) in center lines
-      <input type="number" bind:value={cfg.width_granularity} />
+      <input
+        type="number"
+        bind:value={cfg.width_granularity}
+        min="0.1"
+        step="0.1"
+      />
     </label>
   </div>
 </details>
