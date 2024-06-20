@@ -12,7 +12,13 @@
     MapLibre,
     hoverStateFilter,
   } from "svelte-maplibre";
-  import type { FeatureCollection, LineString, Polygon } from "geojson";
+  import type {
+    FeatureCollection,
+    LineString,
+    Polygon,
+    Geometry,
+    GeoJsonProperties,
+  } from "geojson";
   import bbox from "@turf/bbox";
   import {
     PolygonTool,
@@ -25,15 +31,15 @@
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
-  let input: FeatureCollection<Polygon> | null = null;
-  let skeletons: FeatureCollection<LineString> | null = null;
-  let perps: FeatureCollection<LineString> | null = null;
+  let input: FeatureCollection<Polygon> = emptyGj();
+  let skeletons: FeatureCollection<LineString> = emptyGj();
+  let perps: FeatureCollection<LineString> = emptyGj();
   let thickened: FeatureCollection<
     Polygon,
     { width1: number; width2: number }
-  > | null = null;
-  let centerWithWidth: FeatureCollection<LineString, { width: number }> | null =
-    null;
+  > = emptyGj();
+  let centerWithWidth: FeatureCollection<LineString, { width: number }> =
+    emptyGj();
   let wkt_input = "";
 
   let showInput = true;
@@ -114,6 +120,16 @@
     polygonTool.addEventListenerFailure(() => {
       polygonTool = null;
     });
+  }
+
+  function emptyGj<
+    G extends Geometry = Geometry,
+    P = GeoJsonProperties,
+  >(): FeatureCollection<G, P> {
+    return {
+      type: "FeatureCollection" as const,
+      features: [],
+    };
   }
 
   $: if (currentTestCase != "") {
@@ -225,70 +241,64 @@
     >
       <PolygonToolLayer />
 
-      {#if input}
-        <GeoJSON data={input}>
-          <FillLayer
-            paint={{ "fill-color": "black", "fill-opacity": 0.5 }}
-            layout={{ visibility: showInput ? "visible" : "none" }}
-          />
-        </GeoJSON>
-      {/if}
-      {#if skeletons}
-        <GeoJSON data={skeletons} generateId>
-          <LineLayer
-            manageHoverState
-            paint={{
-              "line-color": hoverStateFilter("red", "blue"),
-              "line-width": 4,
-            }}
-            layout={{ visibility: showSkeletons ? "visible" : "none" }}
-          />
-        </GeoJSON>
-      {/if}
-      {#if perps}
-        <GeoJSON data={perps}>
-          <LineLayer
-            paint={{ "line-color": "green", "line-width": 2 }}
-            layout={{ visibility: showPerps ? "visible" : "none" }}
-          />
-        </GeoJSON>
-      {/if}
-      {#if thickened}
-        <GeoJSON data={thickened} generateId>
-          <FillLayer
-            manageHoverState
-            paint={{
-              "fill-color": "cyan",
-              "fill-opacity": hoverStateFilter(0.5, 0.8),
-            }}
-            layout={{ visibility: showThickened ? "visible" : "none" }}
-          >
-            <Popup let:props>
-              <p>
-                Width between {props.width1.toFixed(1)}m and {props.width2.toFixed(
-                  1,
-                )}m
-              </p>
-            </Popup>
-          </FillLayer>
-        </GeoJSON>
-      {/if}
-      {#if centerWithWidth}
-        <GeoJSON data={centerWithWidth} generateId>
-          <LineLayer
-            manageHoverState
-            paint={{
-              "line-color": hoverStateFilter("purple", "black"),
-              "line-width": 6,
-            }}
-            layout={{ visibility: showCenterWithWidth ? "visible" : "none" }}
-          >
-            <Popup let:props>
-              <p>{props.width.toFixed(1)}m</p>
-            </Popup>
-          </LineLayer>
-        </GeoJSON>
-      {/if}
+      <GeoJSON data={input}>
+        <FillLayer
+          paint={{ "fill-color": "black", "fill-opacity": 0.5 }}
+          layout={{ visibility: showInput ? "visible" : "none" }}
+        />
+      </GeoJSON>
+
+      <GeoJSON data={skeletons} generateId>
+        <LineLayer
+          manageHoverState
+          paint={{
+            "line-color": hoverStateFilter("red", "blue"),
+            "line-width": 4,
+          }}
+          layout={{ visibility: showSkeletons ? "visible" : "none" }}
+        />
+      </GeoJSON>
+
+      <GeoJSON data={perps}>
+        <LineLayer
+          paint={{ "line-color": "green", "line-width": 2 }}
+          layout={{ visibility: showPerps ? "visible" : "none" }}
+        />
+      </GeoJSON>
+
+      <GeoJSON data={thickened} generateId>
+        <FillLayer
+          manageHoverState
+          paint={{
+            "fill-color": "cyan",
+            "fill-opacity": hoverStateFilter(0.5, 0.8),
+          }}
+          layout={{ visibility: showThickened ? "visible" : "none" }}
+        >
+          <Popup let:props>
+            <p>
+              Width between {props.width1.toFixed(1)}m and {props.width2.toFixed(
+                1,
+              )}m
+            </p>
+          </Popup>
+        </FillLayer>
+      </GeoJSON>
+
+      <GeoJSON data={centerWithWidth} generateId>
+        <LineLayer
+          manageHoverState
+          paint={{
+            "line-color": hoverStateFilter("purple", "black"),
+            "line-width": 6,
+          }}
+          layout={{ visibility: showCenterWithWidth ? "visible" : "none" }}
+        >
+          <Popup let:props>
+            <p>{props.width.toFixed(1)}m</p>
+          </Popup>
+        </LineLayer>
+      </GeoJSON>
     </MapLibre>
   </div>
 </Layout>
