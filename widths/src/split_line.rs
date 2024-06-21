@@ -7,24 +7,21 @@ pub fn split(
 ) -> Vec<(LineString, f64)> {
     let mut result = Vec::new();
 
-    // TODO itertools coalesce or chunks_by are both temptingly close to being useful, but...
-    let (mut start_pt, mut start_width) = thickened_points[0];
-    let (mut end_pt, _) = thickened_points[0];
-    let len = thickened_points.len();
-    for (idx, (pt, width)) in thickened_points.into_iter().enumerate() {
-        // Do this first because of the last point case
-        if (start_width - width).abs() <= width_granularity {
-            end_pt = pt;
+    let mut idx1 = 0;
+    while idx1 < thickened_points.len() - 1 {
+        let mut idx2 = idx1 + 1;
+        while (thickened_points[idx1].1 - thickened_points[idx2].1).abs() <= width_granularity {
+            idx2 += 1;
         }
-
-        if idx == len - 1 || (start_width - width).abs() > width_granularity {
-            if let Some(sliced) = slice(linestring, start_pt, end_pt) {
-                // Could try to average the width in this range
-                result.push((sliced, start_width));
-                start_pt = pt;
-                start_width = width;
-            }
+        if let Some(sliced) = slice(
+            linestring,
+            thickened_points[idx1].0,
+            thickened_points[idx2].0,
+        ) {
+            // TODO Output the range of widths, or just the one, or the average?
+            result.push((sliced, thickened_points[idx1].1));
         }
+        idx1 = idx2;
     }
 
     result
@@ -39,3 +36,5 @@ fn slice(linestring: &LineString, pt1: Coord, pt2: Coord) -> Option<LineString> 
     let result = linestring.line_split_twice(frac1, frac2)?;
     result.into_second()
 }
+
+// TODO Unit tests
