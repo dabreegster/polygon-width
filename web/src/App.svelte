@@ -11,6 +11,7 @@
     GeoJSON,
     MapLibre,
     hoverStateFilter,
+    CircleLayer,
   } from "svelte-maplibre";
   import type {
     FeatureCollection,
@@ -130,6 +131,31 @@
       type: "FeatureCollection" as const,
       features: [],
     };
+  }
+
+  function addLinestringEndpoints(
+    input: FeatureCollection<LineString>,
+  ): FeatureCollection<Point> {
+    let output = {
+      type: "FeatureCollection" as const,
+      features: [],
+    };
+    for (let f of input.features) {
+      for (let pt of [
+        f.geometry.coordinates[0],
+        f.geometry.coordinates[f.geometry.coordinates.length - 1],
+      ]) {
+        output.features.push({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Point",
+            coordinates: JSON.parse(JSON.stringify(pt)),
+          },
+        });
+      }
+    }
+    return output;
   }
 
   $: if (currentTestCase != "") {
@@ -298,6 +324,17 @@
             <p>{props.width.toFixed(1)}m</p>
           </Popup>
         </LineLayer>
+      </GeoJSON>
+      <GeoJSON data={addLinestringEndpoints(centerWithWidth)}>
+        <CircleLayer
+          paint={{
+            "circle-opacity": 0,
+            "circle-radius": 10,
+            "circle-stroke-color": "purple",
+            "circle-stroke-width": 2,
+          }}
+          layout={{ visibility: showCenterWithWidth ? "visible" : "none" }}
+        />
       </GeoJSON>
     </MapLibre>
   </div>
