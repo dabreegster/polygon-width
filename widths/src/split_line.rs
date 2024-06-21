@@ -10,7 +10,9 @@ pub fn split(
     let mut idx1 = 0;
     while idx1 < thickened_points.len() - 1 {
         let mut idx2 = idx1 + 1;
-        while (thickened_points[idx1].1 - thickened_points[idx2].1).abs() <= width_granularity {
+        while (thickened_points[idx1].1 - thickened_points[idx2].1).abs() <= width_granularity
+            && idx2 < thickened_points.len() - 1
+        {
             idx2 += 1;
         }
         if let Some(sliced) = slice(
