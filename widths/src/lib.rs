@@ -24,8 +24,9 @@ pub struct Pavement {
     // thickened center lines, along with their width at each end
     pub thickened_lines: Vec<(Polygon, f64, f64)>,
 
-    // The center line and its width, split up into when the width changes past some threshold
-    pub center_with_width: Vec<(LineString, f64)>,
+    // The center line and its min and max width, split up into when the width changes past some
+    // threshold
+    pub center_with_width: Vec<(LineString, f64, f64)>,
 }
 
 impl Pavement {

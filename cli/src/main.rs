@@ -59,9 +59,10 @@ fn main() -> Result<()> {
             f.set_property("width2", width2);
             thickened.push(f);
         }
-        for (ls, width) in pavement.center_with_width {
+        for (ls, min, max) in pavement.center_with_width {
             let mut f = Feature::from(geojson::Geometry::from(&mercator.to_wgs84(&ls)));
-            f.set_property("width", width);
+            f.set_property("min_width", min);
+            f.set_property("max_width", max);
             center_with_width.push(f);
         }
     }

@@ -39,8 +39,10 @@
     Polygon,
     { width1: number; width2: number }
   > = emptyGj();
-  let centerWithWidth: FeatureCollection<LineString, { width: number }> =
-    emptyGj();
+  let centerWithWidth: FeatureCollection<
+    LineString,
+    { min_width: number; max_width: number }
+  > = emptyGj();
   let wkt_input = "";
 
   let showInput = true;
@@ -321,7 +323,7 @@
           layout={{ visibility: showCenterWithWidth ? "visible" : "none" }}
         >
           <Popup let:props>
-            <p>{props.width.toFixed(1)}m</p>
+            <p>{props.min_width.toFixed(1)} - {props.max_width.toFixed(1)}m</p>
           </Popup>
         </LineLayer>
       </GeoJSON>

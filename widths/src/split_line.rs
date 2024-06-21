@@ -1,10 +1,12 @@
 use geo::{Coord, LineLocatePoint, LineSplit, LineString};
 
+/// Splits the line every time the width changes by some granularity. Returns the min and max width
+/// of each split.
 pub fn split(
     linestring: &LineString,
     thickened_points: Vec<(Coord, f64)>,
     width_granularity: f64,
-) -> Vec<(LineString, f64)> {
+) -> Vec<(LineString, f64, f64)> {
     let mut result = Vec::new();
 
     let mut idx1 = 0;
@@ -20,8 +22,17 @@ pub fn split(
             thickened_points[idx1].0,
             thickened_points[idx2].0,
         ) {
-            // TODO Output the range of widths, or just the one, or the average?
-            result.push((sliced, thickened_points[idx1].1));
+            let min = thickened_points[idx1..=idx2]
+                .iter()
+                .map(|pair| pair.1)
+                .min_by_key(|w| (w * 1000.0) as usize)
+                .unwrap();
+            let max = thickened_points[idx1..=idx2]
+                .iter()
+                .map(|pair| pair.1)
+                .max_by_key(|w| (w * 1000.0) as usize)
+                .unwrap();
+            result.push((sliced, min, max));
         }
         idx1 = idx2;
     }
