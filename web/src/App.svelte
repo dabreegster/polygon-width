@@ -19,6 +19,7 @@
     Polygon,
     Geometry,
     GeoJsonProperties,
+    Point,
   } from "geojson";
   import bbox from "@turf/bbox";
   import {
@@ -29,6 +30,8 @@
   import Settings from "./Settings.svelte";
   import { testCases } from "./test_cases";
   import { parse as parseWkt } from "wkt";
+  import { layerId } from "./zorder";
+  import { map as mapStore } from "./stores";
 
   let maptilerApiKey = "MZEJTanw3WpxRvt7qDfo";
 
@@ -53,6 +56,10 @@
   let showWkt = false;
 
   let map: Map;
+  $: if (map) {
+    mapStore.set(map);
+  }
+
   let fileInput: HTMLInputElement;
   let polygonTool: PolygonTool | null = null;
   let currentTestCase = "";
@@ -139,9 +146,9 @@
     input: FeatureCollection<LineString>,
   ): FeatureCollection<Point> {
     let output = {
-      type: "FeatureCollection" as const,
+      type: "FeatureCollection",
       features: [],
-    };
+    } as FeatureCollection<Point>;
     for (let f of input.features) {
       for (let pt of [
         f.geometry.coordinates[0],
@@ -271,6 +278,7 @@
 
       <GeoJSON data={input}>
         <FillLayer
+          {...layerId("input-polygons")}
           paint={{ "fill-color": "black", "fill-opacity": 0.5 }}
           layout={{ visibility: showInput ? "visible" : "none" }}
         />
@@ -278,6 +286,7 @@
 
       <GeoJSON data={skeletons} generateId>
         <LineLayer
+          {...layerId("skeletons")}
           manageHoverState
           paint={{
             "line-color": hoverStateFilter("red", "blue"),
@@ -289,6 +298,7 @@
 
       <GeoJSON data={perps}>
         <LineLayer
+          {...layerId("perps")}
           paint={{ "line-color": "green", "line-width": 2 }}
           layout={{ visibility: showPerps ? "visible" : "none" }}
         />
@@ -296,6 +306,7 @@
 
       <GeoJSON data={thickened} generateId>
         <FillLayer
+          {...layerId("thickened")}
           manageHoverState
           paint={{
             "fill-color": "cyan",
@@ -315,6 +326,7 @@
 
       <GeoJSON data={centerWithWidth} generateId>
         <LineLayer
+          {...layerId("center-with-width")}
           manageHoverState
           paint={{
             "line-color": hoverStateFilter("purple", "black"),
@@ -329,6 +341,7 @@
       </GeoJSON>
       <GeoJSON data={addLinestringEndpoints(centerWithWidth)}>
         <CircleLayer
+          {...layerId("center-endpoints")}
           paint={{
             "circle-opacity": 0,
             "circle-radius": 10,
