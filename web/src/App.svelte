@@ -58,6 +58,8 @@
   let map: Map;
   $: if (map) {
     mapStore.set(map);
+    // @ts-expect-error TODO For debugging
+    window.map = map;
   }
 
   let fileInput: HTMLInputElement;
@@ -276,7 +278,7 @@
     >
       <PolygonToolLayer />
 
-      <GeoJSON data={input}>
+      <GeoJSON id="input" data={input}>
         <FillLayer
           {...layerId("input-polygons")}
           paint={{ "fill-color": "black", "fill-opacity": 0.5 }}
@@ -284,7 +286,7 @@
         />
       </GeoJSON>
 
-      <GeoJSON data={skeletons} generateId>
+      <GeoJSON id="skeletons" data={skeletons} generateId>
         <LineLayer
           {...layerId("skeletons")}
           manageHoverState
@@ -296,7 +298,7 @@
         />
       </GeoJSON>
 
-      <GeoJSON data={perps}>
+      <GeoJSON id="perps" data={perps}>
         <LineLayer
           {...layerId("perps")}
           paint={{ "line-color": "green", "line-width": 2 }}
@@ -304,7 +306,7 @@
         />
       </GeoJSON>
 
-      <GeoJSON data={thickened} generateId>
+      <GeoJSON id="thickened" data={thickened} generateId>
         <FillLayer
           {...layerId("thickened")}
           manageHoverState
@@ -324,7 +326,7 @@
         </FillLayer>
       </GeoJSON>
 
-      <GeoJSON data={centerWithWidth} generateId>
+      <GeoJSON id="centerWithWidth" data={centerWithWidth} generateId>
         <LineLayer
           {...layerId("center-with-width")}
           manageHoverState
@@ -339,7 +341,10 @@
           </Popup>
         </LineLayer>
       </GeoJSON>
-      <GeoJSON data={addLinestringEndpoints(centerWithWidth)}>
+      <GeoJSON
+        id="centerWithWidth"
+        data={addLinestringEndpoints(centerWithWidth)}
+      >
         <CircleLayer
           {...layerId("center-endpoints")}
           paint={{
